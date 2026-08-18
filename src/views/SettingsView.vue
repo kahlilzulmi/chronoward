@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { usePomodoro } from "../composables/usePomodoro";
-import { clampMinutes, DEFAULT_SETTINGS, settings } from "../composables/useSettings";
+import {
+  clampMinutes,
+  DEFAULT_SETTINGS,
+  parseListInput,
+  settings,
+} from "../composables/useSettings";
 
 const { phase, isRunning } = usePomodoro();
 
@@ -17,10 +22,29 @@ const liveSessionHint = computed(() =>
     : "Idle countdown follows the work duration.",
 );
 
+const blocklistText = ref(settings.blocklist.join("\n"));
+const ignoredAppsText = ref(settings.ignoredApps.join("\n"));
+
+function commitBlocklist() {
+  settings.blocklist = parseListInput(
+    blocklistText.value,
+    DEFAULT_SETTINGS.blocklist,
+  );
+  blocklistText.value = settings.blocklist.join("\n");
+}
+
+function commitIgnoredApps() {
+  settings.ignoredApps = parseListInput(
+    ignoredAppsText.value,
+    DEFAULT_SETTINGS.ignoredApps,
+  );
+  ignoredAppsText.value = settings.ignoredApps.join("\n");
+}
+
 </script>
 
 <template>
-  <section class="flex flex-1 flex-col gap-6 py-6 sm:gap-8 sm:py-10">
+  <section class="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 py-6 sm:gap-8 sm:py-10">
     <header class="space-y-1">
       <h1 class="text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
         Settings
@@ -109,6 +133,65 @@ const liveSessionHint = computed(() =>
           />
         </button>
       </div>
+    </div>
+
+    <div class="space-y-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
+      <div>
+        <p class="text-sm font-medium text-stone-800 sm:text-base">Intervention mode</p>
+        <p class="text-sm text-stone-500">
+          Warning sends a system notification. Block pauses work and takes over the screen.
+        </p>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          class="min-h-11 rounded-xl border px-4 text-sm font-semibold"
+          :class="
+            settings.interventionMode === 'warning'
+              ? 'border-teal-800 bg-teal-800 text-white'
+              : 'border-stone-300 bg-stone-50 text-stone-700'
+          "
+          @click="settings.interventionMode = 'warning'"
+        >
+          Warning
+        </button>
+        <button
+          type="button"
+          class="min-h-11 rounded-xl border px-4 text-sm font-semibold"
+          :class="
+            settings.interventionMode === 'block'
+              ? 'border-teal-800 bg-teal-800 text-white'
+              : 'border-stone-300 bg-stone-50 text-stone-700'
+          "
+          @click="settings.interventionMode = 'block'"
+        >
+          Block
+        </button>
+      </div>
+
+      <label class="block space-y-2">
+        <span class="text-sm font-medium text-stone-700">Blocklist</span>
+        <textarea
+          v-model="blocklistText"
+          rows="4"
+          class="w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 font-mono text-sm text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+          @blur="commitBlocklist"
+        />
+        <span class="text-xs text-stone-500">One domain or app fragment per line.</span>
+      </label>
+
+      <label class="block space-y-2">
+        <span class="text-sm font-medium text-stone-700">Ignored apps</span>
+        <textarea
+          v-model="ignoredAppsText"
+          rows="3"
+          class="w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 font-mono text-sm text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+          @blur="commitIgnoredApps"
+        />
+        <span class="text-xs text-stone-500">
+          If the active app name contains any of these, skip intervention (IDEs).
+        </span>
+      </label>
     </div>
   </section>
 </template>

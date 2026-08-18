@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from "vue-router";
+import BlockerOverlay from "./components/BlockerOverlay.vue";
+import { useIntervention } from "./composables/useIntervention";
+
+const { isBlocking } = useIntervention();
 </script>
 
 <template>
@@ -11,7 +15,7 @@ import { RouterLink, RouterView } from "vue-router";
       class="sticky top-0 z-10 border-b border-stone-200/80 bg-stone-100/90 backdrop-blur-sm"
     >
       <div
-        class="mx-auto flex w-full max-w-lg items-center justify-between px-4 py-3 sm:max-w-xl sm:px-6 md:max-w-2xl"
+        class="mx-auto flex w-full max-w-lg items-center justify-between px-4 py-3 sm:max-w-2xl sm:px-6 md:max-w-5xl md:py-4 lg:max-w-6xl"
       >
         <p class="text-base font-semibold tracking-tight sm:text-lg">Chronoward</p>
         <nav class="hidden gap-1 md:flex" aria-label="Primary">
@@ -30,7 +34,7 @@ import { RouterLink, RouterView } from "vue-router";
               "
               @click="navigate"
             >
-              Timer
+              Dashboard
             </a>
           </RouterLink>
           <RouterLink
@@ -55,7 +59,7 @@ import { RouterLink, RouterView } from "vue-router";
       </div>
     </header>
 
-    <main class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 sm:max-w-xl sm:px-6 md:max-w-2xl">
+    <main class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 sm:max-w-2xl sm:px-6 md:max-w-5xl lg:max-w-6xl">
       <RouterView />
     </main>
 
@@ -71,7 +75,7 @@ import { RouterLink, RouterView } from "vue-router";
             :class="isExactActive ? 'bg-stone-100 text-teal-800' : 'text-stone-500'"
             @click="navigate"
           >
-            Timer
+            Dashboard
           </a>
         </RouterLink>
         <RouterLink
@@ -90,5 +94,6 @@ import { RouterLink, RouterView } from "vue-router";
         </RouterLink>
       </div>
     </nav>
+    <BlockerOverlay v-if="isBlocking" />
   </div>
 </template>

@@ -17,10 +17,12 @@ const phase = ref<PomodoroPhase>("idle");
 const isRunning = ref(false);
 const remainingSeconds = ref(settings.workMinutes * 60);
 const completedWorkCount = ref(0);
+const focusedSecondsCompleted = ref(0);
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let targetEndMs = 0;
 let preAlertFired = false;
+let sessionDurationSeconds = settings.workMinutes * 60;
 
 function durationSecondsFor(nextPhase: PomodoroPhase): number {
   switch (nextPhase) {
@@ -96,7 +98,8 @@ function startTicking() {
 function enterPhase(nextPhase: PomodoroPhase, autoRun: boolean) {
   clearTick();
   phase.value = nextPhase;
-  remainingSeconds.value = durationSecondsFor(nextPhase);
+  sessionDurationSeconds = durationSecondsFor(nextPhase);
+  remainingSeconds.value = sessionDurationSeconds;
   isRunning.value = false;
   armPreAlert();
 
@@ -114,6 +117,8 @@ function nextBreakPhase(): PomodoroPhase {
 
 function completeCurrent() {
   if (phase.value === "work") {
+    const elapsed = Math.max(0, sessionDurationSeconds - remainingSeconds.value);
+    focusedSecondsCompleted.value += elapsed;
     completedWorkCount.value += 1;
     enterPhase(nextBreakPhase(), settings.autoStartBreaks);
     return;
@@ -175,7 +180,8 @@ watch(
   () => settings.workMinutes,
   () => {
     if (phase.value === "idle" && !isRunning.value) {
-      remainingSeconds.value = durationSecondsFor("idle");
+      sessionDurationSeconds = durationSecondsFor("idle");
+      remainingSeconds.value = sessionDurationSeconds;
     }
   },
 );
@@ -198,6 +204,40 @@ const sessionInCycle = computed(() => {
 
 const canSkip = computed(() => phase.value !== "idle");
 
+const sessionProgress = computed(() => {
+  if (sessionDurationSeconds <= 0) {
+    return 0;
+  }
+  return Math.min(
+    1,
+    Math.max(0, remainingSeconds.value / sessionDurationSeconds),
+  );
+});
+
+const focusSecondsToday = computed(() => {
+  if (phase.value === "work") {
+    const elapsed = Math.max(0, sessionDurationSeconds - remainingSeconds.value);
+    return focusedSecondsCompleted.value + elapsed;
+  }
+  return focusedSecondsCompleted.value;
+});
+
+const nextBreakKind = computed(() => {
+  if (phase.value === "shortBreak") {
+    return "Short break";
+  }
+  if (phase.value === "longBreak") {
+    return "Long break";
+  }
+  if (phase.value === "work") {
+    return sessionInCycle.value === LONG_BREAK_INTERVAL
+      ? "Long break"
+      : "Short break";
+  }
+  const nextWorkSlot = (completedWorkCount.value % LONG_BREAK_INTERVAL) + 1;
+  return nextWorkSlot === LONG_BREAK_INTERVAL ? "Long break" : "Short break";
+});
+
 export function usePomodoro() {
   return {
     phase,
@@ -208,6 +248,9 @@ export function usePomodoro() {
     completedWorkCount,
     sessionInCycle,
     canSkip,
+    sessionProgress,
+    focusSecondsToday,
+    nextBreakKind,
     start,
     pause,
     toggle,

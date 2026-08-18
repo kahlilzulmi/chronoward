@@ -2,12 +2,17 @@ import { reactive, watch } from "vue";
 
 export const LONG_BREAK_INTERVAL = 4;
 
+export type InterventionMode = "warning" | "block";
+
 export interface PomodoroSettings {
   workMinutes: number;
   shortBreakMinutes: number;
   longBreakMinutes: number;
   autoStartWork: boolean;
   autoStartBreaks: boolean;
+  blocklist: string[];
+  ignoredApps: string[];
+  interventionMode: InterventionMode;
 }
 
 export const DEFAULT_SETTINGS: PomodoroSettings = {
@@ -16,6 +21,9 @@ export const DEFAULT_SETTINGS: PomodoroSettings = {
   longBreakMinutes: 15,
   autoStartWork: false,
   autoStartBreaks: false,
+  blocklist: ["twitter.com", "instagram.com", "netflix.com"],
+  ignoredApps: ["cursor", "code", "antigravity"],
+  interventionMode: "warning",
 };
 
 const STORAGE_KEY = "chronoward.settings";
@@ -29,15 +37,31 @@ export function clampMinutes(value: number, fallback: number): number {
   return Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, Math.round(value)));
 }
 
+function parseStringList(value: unknown, fallback: string[]): string[] {
+  if (!Array.isArray(value)) {
+    return [...fallback];
+  }
+  const items = value.map((item) => String(item).trim()).filter(Boolean);
+  return items.length > 0 ? items : [...fallback];
+}
+
+function cloneDefaults(): PomodoroSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    blocklist: [...DEFAULT_SETTINGS.blocklist],
+    ignoredApps: [...DEFAULT_SETTINGS.ignoredApps],
+  };
+}
+
 function loadSettings(): PomodoroSettings {
   if (typeof localStorage === "undefined") {
-    return { ...DEFAULT_SETTINGS };
+    return cloneDefaults();
   }
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return { ...DEFAULT_SETTINGS };
+      return cloneDefaults();
     }
 
     const parsed = JSON.parse(raw) as Partial<PomodoroSettings>;
@@ -56,9 +80,16 @@ function loadSettings(): PomodoroSettings {
       ),
       autoStartWork: Boolean(parsed.autoStartWork),
       autoStartBreaks: Boolean(parsed.autoStartBreaks),
+      blocklist: parseStringList(parsed.blocklist, DEFAULT_SETTINGS.blocklist),
+      ignoredApps: parseStringList(
+        parsed.ignoredApps,
+        DEFAULT_SETTINGS.ignoredApps,
+      ),
+      interventionMode:
+        parsed.interventionMode === "block" ? "block" : "warning",
     };
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return cloneDefaults();
   }
 }
 
@@ -75,11 +106,20 @@ watch(
   { deep: true },
 );
 
+export function parseListInput(text: string, fallback: string[]): string[] {
+  const items = text
+    .split(/[\n,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return items.length > 0 ? items : [...fallback];
+}
+
 export function useSettings() {
   return {
     settings,
     LONG_BREAK_INTERVAL,
     clampMinutes,
+    parseListInput,
     DEFAULT_SETTINGS,
   };
 }
