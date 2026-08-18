@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-show-windows-timer-toast"
+description = "Show the Windows interactive timer toast."
+commands.allow = ["show_windows_timer_toast"]
+
+[[permission]]
+identifier = "allow-clear-windows-toast"
+description = "Clear the Windows interactive timer toast."
+commands.allow = ["clear_windows_toast"]

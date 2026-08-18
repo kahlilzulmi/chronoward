@@ -1,9 +1,34 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from "vue-router";
+import { onMounted, watch } from "vue";
+import { RouterLink, RouterView, useRouter } from "vue-router";
 import BlockerOverlay from "./components/BlockerOverlay.vue";
 import { useIntervention } from "./composables/useIntervention";
+import { useAndroidTrackingPermissions } from "./composables/useAndroidTrackingPermissions";
+import { useTracking } from "./composables/useTracking";
 
 const { isBlocking } = useIntervention();
+useTracking();
+const router = useRouter();
+const { isAndroid, isLoaded, needsUsageAccess, fetchStatus } =
+  useAndroidTrackingPermissions();
+
+onMounted(() => {
+  void fetchStatus();
+});
+
+watch([isLoaded, needsUsageAccess], () => {
+  if (!isAndroid.value || !isLoaded.value) {
+    return;
+  }
+  const routeName = router.currentRoute.value.name;
+  if (needsUsageAccess.value && routeName !== "onboarding") {
+    void router.replace({ name: "onboarding" });
+    return;
+  }
+  if (!needsUsageAccess.value && routeName === "onboarding") {
+    void router.replace({ name: "timer" });
+  }
+});
 </script>
 
 <template>

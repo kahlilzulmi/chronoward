@@ -10,6 +10,7 @@ export interface PomodoroSettings {
   longBreakMinutes: number;
   autoStartWork: boolean;
   autoStartBreaks: boolean;
+  showOngoingTimerNotification: boolean;
   blocklist: string[];
   ignoredApps: string[];
   interventionMode: InterventionMode;
@@ -21,6 +22,7 @@ export const DEFAULT_SETTINGS: PomodoroSettings = {
   longBreakMinutes: 15,
   autoStartWork: false,
   autoStartBreaks: false,
+  showOngoingTimerNotification: true,
   blocklist: ["twitter.com", "instagram.com", "netflix.com"],
   ignoredApps: ["cursor", "code", "antigravity"],
   interventionMode: "warning",
@@ -80,6 +82,10 @@ function loadSettings(): PomodoroSettings {
       ),
       autoStartWork: Boolean(parsed.autoStartWork),
       autoStartBreaks: Boolean(parsed.autoStartBreaks),
+      showOngoingTimerNotification:
+        typeof parsed.showOngoingTimerNotification === "boolean"
+          ? parsed.showOngoingTimerNotification
+          : DEFAULT_SETTINGS.showOngoingTimerNotification,
       blocklist: parseStringList(parsed.blocklist, DEFAULT_SETTINGS.blocklist),
       ignoredApps: parseStringList(
         parsed.ignoredApps,

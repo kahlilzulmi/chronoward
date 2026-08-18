@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chrono_accessibility_description">Optional. Chronoward uses Accessibility only to read the browser address bar. Leave it off if you use banking apps.</string>
+</resources>

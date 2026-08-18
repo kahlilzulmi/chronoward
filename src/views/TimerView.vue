@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import UsagePieChart from "../components/UsagePieChart.vue";
 import { usePomodoro, type PomodoroPhase } from "../composables/usePomodoro";
 import { useSensorFeed } from "../composables/useSensorFeed";
 import { useIntervention } from "../composables/useIntervention";
+import { useAndroidTrackingPermissions } from "../composables/useAndroidTrackingPermissions";
+import { useLiveSensorStatus } from "../composables/useLiveSensorStatus";
 import { LONG_BREAK_INTERVAL, settings } from "../composables/useSettings";
 
 const {
@@ -13,14 +16,21 @@ const {
   sessionInCycle,
   canSkip,
   sessionProgress,
-  focusSecondsToday,
-  nextBreakKind,
   toggle,
   skip,
 } = usePomodoro();
 
-const { activeApplication, activeContext, windowTitle, isLive } = useSensorFeed();
-const { isBlocking, distractionsBlocked } = useIntervention();
+const { activeApplication, activeContext, windowTitle } = useSensorFeed();
+const { isBlocking } = useIntervention();
+const {
+  isAndroid,
+  needsUsageAccess,
+  needsAccessibility,
+  fetchStatus,
+  requestPermissions,
+} = useAndroidTrackingPermissions();
+const { sensorStatus, isLive } = useLiveSensorStatus();
+const accessibilityBannerDismissed = ref(false);
 
 const phaseBadgeClass = computed(() => {
   const classes: Record<PomodoroPhase, string> = {
@@ -40,26 +50,6 @@ const primaryActionLabel = computed(() => {
     return "Start";
   }
   return "Resume";
-});
-
-const focusTimeLabel = computed(() => {
-  const total = Math.max(0, Math.floor(focusSecondsToday.value));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  return `${minutes}m`;
-});
-
-const upcomingBreakLabel = computed(() => {
-  if (phase.value === "shortBreak" || phase.value === "longBreak") {
-    return `Now · ${formattedTime.value}`;
-  }
-  if (phase.value === "work") {
-    return `${formattedTime.value} · ${nextBreakKind.value}`;
-  }
-  return `After work · ${nextBreakKind.value}`;
 });
 
 const modeBadge = computed(() => {
@@ -86,6 +76,14 @@ const progressPercent = computed(() => Math.round(sessionProgress.value * 100));
 
 const sessionSlots = Array.from({ length: LONG_BREAK_INTERVAL }, (_, i) => i + 1);
 
+const showAccessibilityPrompt = computed(
+  () =>
+    isAndroid.value &&
+    !needsUsageAccess.value &&
+    needsAccessibility.value &&
+    !accessibilityBannerDismissed.value,
+);
+
 function onKeydown(event: KeyboardEvent) {
   if (isBlocking.value) {
     return;
@@ -109,17 +107,68 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
+function onVisibilityChange() {
+  if (document.visibilityState === "visible") {
+    void fetchStatus();
+  }
+}
+
+async function openAccessibilitySettings() {
+  await requestPermissions(true);
+}
+
 onMounted(() => {
   window.addEventListener("keydown", onKeydown);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  void fetchStatus();
 });
 
 onUnmounted(() => {
   window.removeEventListener("keydown", onKeydown);
+  document.removeEventListener("visibilitychange", onVisibilityChange);
 });
 </script>
 
 <template>
   <section class="grid flex-1 grid-cols-1 gap-4 py-4 md:grid-cols-3 md:items-stretch md:gap-5 md:py-8">
+    <div
+      v-if="showAccessibilityPrompt"
+      class="md:col-span-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-5"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="max-w-2xl space-y-1">
+          <p class="text-sm font-semibold text-amber-900">Enable Deep URL Tracking (Optional)</p>
+          <p class="text-sm text-amber-800">
+            App tracking is active. Turn on Accessibility to read browser address bars for higher
+            precision interventions.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="rounded-lg px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+          @click="accessibilityBannerDismissed = true"
+        >
+          Dismiss
+        </button>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="min-h-10 rounded-xl border border-amber-700 bg-amber-700 px-4 text-sm font-semibold text-white"
+          @click="openAccessibilitySettings"
+        >
+          Open Accessibility Settings
+        </button>
+        <button
+          type="button"
+          class="min-h-10 rounded-xl border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-900"
+          @click="fetchStatus"
+        >
+          Recheck
+        </button>
+      </div>
+    </div>
+
     <article
       class="flex flex-col justify-between gap-6 rounded-2xl border bg-white p-6 md:col-span-2 md:gap-8 md:p-8"
       :class="timerCardClass"
@@ -212,17 +261,13 @@ onUnmounted(() => {
           </p>
           <span
             class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider"
-            :class="
-              isLive
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-amber-100 text-amber-800'
-            "
+            :class="sensorStatus.tone"
           >
             <span
               class="h-1.5 w-1.5 rounded-full"
-              :class="isLive ? 'animate-pulse bg-emerald-600' : 'bg-amber-600'"
+              :class="sensorStatus.dot"
             />
-            {{ isLive ? "Active" : "Mock" }}
+            {{ sensorStatus.label }}
           </span>
         </div>
         <dl class="space-y-4">
@@ -247,31 +292,7 @@ onUnmounted(() => {
         </dl>
       </article>
 
-      <article class="rounded-2xl border border-stone-200 bg-white p-6">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-          Analytics
-        </p>
-        <dl class="mt-4 divide-y divide-stone-100">
-          <div class="py-3 first:pt-0">
-            <dt class="text-xs font-medium text-stone-500">Total Focus Time Today</dt>
-            <dd class="mt-1 font-mono text-xl font-semibold tabular-nums text-stone-900">
-              {{ focusTimeLabel }}
-            </dd>
-          </div>
-          <div class="py-3">
-            <dt class="text-xs font-medium text-stone-500">Distractions Blocked</dt>
-            <dd class="mt-1 font-mono text-xl font-semibold tabular-nums text-stone-900">
-              {{ distractionsBlocked }}
-            </dd>
-          </div>
-          <div class="py-3 last:pb-0">
-            <dt class="text-xs font-medium text-stone-500">Upcoming Break</dt>
-            <dd class="mt-1 font-mono text-sm font-semibold tabular-nums text-stone-900">
-              {{ upcomingBreakLabel }}
-            </dd>
-          </div>
-        </dl>
-      </article>
+      <UsagePieChart />
     </div>
   </section>
 </template>

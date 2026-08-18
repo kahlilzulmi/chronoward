@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-start-pairing-mode"
+description = "Enables the start_pairing_mode command so the desktop can host LAN pairing."
+commands.allow = ["start_pairing_mode"]

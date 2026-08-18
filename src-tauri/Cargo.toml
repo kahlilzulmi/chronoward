@@ -22,7 +22,32 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-uiautomation = { version = "0.25.0", features = ["control"] }
-windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading"] }
 tauri-plugin-notification = "2.3.3"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-chronoward-tracking = { path = "plugins/chronoward-tracking" }
+
+[target.'cfg(windows)'.dependencies]
+uiautomation = { version = "0.25.0", features = ["control"] }
+windows = { version = "0.62.2", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_System_Threading",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Data_Xml_Dom",
+    "UI_Notifications",
+] }
+
+# Desktop LAN pairing host (not compiled into Android/iOS).
+# websocket stays desktop-only: rustls/ring cannot find NDK clang.exe on Windows.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+axum = { version = "0.8", features = ["ws"] }
+local-ip-address = "0.6"
+rand = "0.9"
+tokio = { version = "1", features = ["macros", "net", "sync", "time"] }
+tauri-plugin-websocket = "2"
+
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+tauri-plugin-barcode-scanner = "2"
 

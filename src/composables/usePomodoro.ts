@@ -1,5 +1,17 @@
 import { computed, ref, watch } from "vue";
+import { listen } from "@tauri-apps/api/event";
+import { addPluginListener } from "@tauri-apps/api/core";
 import { LONG_BREAK_INTERVAL, settings } from "./useSettings";
+import {
+  cancelExactPreAlert,
+  notifyUser,
+  scheduleExactPreAlert,
+} from "./useNotify";
+import {
+  clearOngoingNotification,
+  startOngoingNotification,
+  updateOngoingNotification,
+} from "./useOngoingNotification";
 
 export type PomodoroPhase = "idle" | "work" | "shortBreak" | "longBreak";
 
@@ -22,7 +34,71 @@ const focusedSecondsCompleted = ref(0);
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let targetEndMs = 0;
 let preAlertFired = false;
+let nativePreAlertArmed = false;
+let nativePreAlertEpoch = 0;
 let sessionDurationSeconds = settings.workMinutes * 60;
+
+const isAndroidRuntime = /android/i.test(
+  typeof navigator === "undefined" ? "" : navigator.userAgent,
+);
+
+const ADD_FIVE_MINUTES_SECONDS = 300;
+const ADD_FIVE_MINUTES_MS = 300_000;
+
+let notificationActionStarted = false;
+
+function nativeTitle(): string {
+  return `Chronoward - ${PHASE_LABELS[phase.value]}`;
+}
+
+function nativeArgs(isPaused: boolean) {
+  return {
+    title: nativeTitle(),
+    remainingSeconds: remainingSeconds.value,
+    isPaused,
+    sessionType: phase.value,
+  };
+}
+
+function syncNativeStart() {
+  if (phase.value === "idle") {
+    void clearOngoingNotification();
+    return;
+  }
+  void startOngoingNotification(nativeArgs(false));
+}
+
+function syncNativeUpdate(isPaused: boolean) {
+  if (phase.value === "idle") {
+    void clearOngoingNotification();
+    return;
+  }
+  void updateOngoingNotification(nativeArgs(isPaused));
+}
+
+function syncNativeClear() {
+  void clearOngoingNotification();
+}
+
+function parseNotificationAction(payload: unknown): string {
+  if (typeof payload === "string") {
+    const trimmed = payload.trim();
+    if (trimmed.toLowerCase().startsWith("action=")) {
+      return trimmed.slice("action=".length).trim();
+    }
+    return trimmed;
+  }
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    if (typeof record.action === "string") {
+      return record.action;
+    }
+    if (typeof record.payload === "string") {
+      return record.payload;
+    }
+  }
+  return "";
+}
 
 function durationSecondsFor(nextPhase: PomodoroPhase): number {
   switch (nextPhase) {
@@ -43,11 +119,49 @@ function clearTick() {
   }
 }
 
+function disarmNativePreAlert() {
+  nativePreAlertEpoch += 1;
+  nativePreAlertArmed = false;
+  void cancelExactPreAlert();
+}
+
+function armNativePreAlert() {
+  const epoch = ++nativePreAlertEpoch;
+  if (!isAndroidRuntime || phase.value === "idle") {
+    nativePreAlertArmed = false;
+    void cancelExactPreAlert();
+    return;
+  }
+  const delayMs = (remainingSeconds.value - PRE_ALERT_SECONDS) * 1000;
+  if (delayMs <= 0) {
+    nativePreAlertArmed = false;
+    void cancelExactPreAlert();
+    return;
+  }
+  void scheduleExactPreAlert(
+    delayMs,
+    "Chronoward",
+    `${PHASE_LABELS[phase.value]} ends in 1 minute.`,
+  ).then((armed) => {
+    if (epoch !== nativePreAlertEpoch) {
+      return;
+    }
+    nativePreAlertArmed = armed;
+  });
+}
+
 function emitPreAlert() {
   console.log("[chronoward] pre-alert", {
     phase: phase.value,
     remainingSeconds: remainingSeconds.value,
   });
+  if (nativePreAlertArmed) {
+    return;
+  }
+  void notifyUser(
+    "Chronoward",
+    `${PHASE_LABELS[phase.value]} ends in 1 minute.`,
+  );
 }
 
 function armPreAlert() {
@@ -88,11 +202,17 @@ function tick() {
   }
 }
 
-function startTicking() {
+function startTicking(fromResume = false) {
   clearTick();
   targetEndMs = Date.now() + remainingSeconds.value * 1000;
   isRunning.value = true;
   intervalId = setInterval(tick, TICK_MS);
+  armNativePreAlert();
+  if (fromResume) {
+    syncNativeUpdate(false);
+  } else {
+    syncNativeStart();
+  }
 }
 
 function enterPhase(nextPhase: PomodoroPhase, autoRun: boolean) {
@@ -103,8 +223,19 @@ function enterPhase(nextPhase: PomodoroPhase, autoRun: boolean) {
   isRunning.value = false;
   armPreAlert();
 
+  if (nextPhase === "work") {
+    void notifyUser("Chronoward", "Focus session started. Stay on task.");
+  } else if (nextPhase === "shortBreak") {
+    void notifyUser("Chronoward", "Short break started.");
+  } else if (nextPhase === "longBreak") {
+    void notifyUser("Chronoward", "Long break started.");
+  }
+
   if (autoRun && nextPhase !== "idle") {
     startTicking();
+  } else {
+    disarmNativePreAlert();
+    syncNativeClear();
   }
 }
 
@@ -139,7 +270,7 @@ function start() {
     return;
   }
   if (!isRunning.value && remainingSeconds.value > 0) {
-    startTicking();
+    startTicking(true);
   }
 }
 
@@ -159,6 +290,8 @@ function pause() {
 
   clearTick();
   isRunning.value = false;
+  disarmNativePreAlert();
+  syncNativeUpdate(true);
 }
 
 function toggle() {
@@ -176,6 +309,88 @@ function skip() {
   completeCurrent();
 }
 
+function addFiveMinutes() {
+  if (phase.value === "idle") {
+    return;
+  }
+  if (isRunning.value) {
+    remainingSeconds.value = Math.max(
+      0,
+      Math.ceil((targetEndMs - Date.now()) / 1000),
+    );
+  }
+  remainingSeconds.value += ADD_FIVE_MINUTES_SECONDS;
+  targetEndMs += ADD_FIVE_MINUTES_MS;
+  preAlertFired = false;
+  armPreAlert();
+  if (isRunning.value) {
+    armNativePreAlert();
+    syncNativeStart();
+  } else {
+    syncNativeUpdate(true);
+  }
+}
+
+function reset() {
+  enterPhase("idle", false);
+}
+
+function dispatchNotificationAction(payload: unknown) {
+  if (!settings.showOngoingTimerNotification) {
+    return;
+  }
+  const action = parseNotificationAction(payload)
+    .toLowerCase()
+    .replace(/-/g, "_");
+  switch (action) {
+    case "pause":
+      pause();
+      return;
+    case "resume":
+      start();
+      return;
+    case "skip":
+      skip();
+      return;
+    case "add_5m":
+    case "add_time":
+    case "addtime":
+      addFiveMinutes();
+      return;
+    case "stop":
+    case "reset":
+      reset();
+      return;
+    default:
+      if (action) {
+        console.log("[chronoward] unknown notification-action", action);
+      }
+  }
+}
+
+function startNotificationActionListener() {
+  if (notificationActionStarted) {
+    return;
+  }
+  notificationActionStarted = true;
+
+  void listen("notification-action", (event) => {
+    dispatchNotificationAction(event.payload);
+  }).catch(() => {
+    notificationActionStarted = false;
+  });
+
+  void addPluginListener(
+    "chronoward-tracking",
+    "notification-action",
+    (payload) => {
+      dispatchNotificationAction(payload);
+    },
+  ).catch(() => {
+    // plugin listener is expected to fail on desktop
+  });
+}
+
 watch(
   () => settings.workMinutes,
   () => {
@@ -183,6 +398,24 @@ watch(
       sessionDurationSeconds = durationSecondsFor("idle");
       remainingSeconds.value = sessionDurationSeconds;
     }
+  },
+);
+
+watch(
+  () => settings.showOngoingTimerNotification,
+  (enabled) => {
+    if (!enabled) {
+      syncNativeClear();
+      return;
+    }
+    if (phase.value === "idle") {
+      return;
+    }
+    if (isRunning.value) {
+      syncNativeStart();
+      return;
+    }
+    syncNativeUpdate(true);
   },
 );
 
@@ -239,6 +472,7 @@ const nextBreakKind = computed(() => {
 });
 
 export function usePomodoro() {
+  startNotificationActionListener();
   return {
     phase,
     phaseLabel,
@@ -255,5 +489,7 @@ export function usePomodoro() {
     pause,
     toggle,
     skip,
+    addFiveMinutes,
+    reset,
   };
 }

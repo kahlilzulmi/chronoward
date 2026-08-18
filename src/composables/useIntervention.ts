@@ -1,12 +1,8 @@
 import { ref } from "vue";
-import {
-  isPermissionGranted,
-  requestPermission,
-  sendNotification,
-} from "@tauri-apps/plugin-notification";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { settings } from "./useSettings";
 import { usePomodoro } from "./usePomodoro";
+import { notifyUser } from "./useNotify";
 
 const WARNING_COOLDOWN_MS = 10_000;
 
@@ -35,29 +31,14 @@ function matchingBlocklistEntry(appName: string, url: string): string | null {
   return null;
 }
 
-async function ensureNotificationPermission(): Promise<boolean> {
-  try {
-    let granted = await isPermissionGranted();
-    if (!granted) {
-      const permission = await requestPermission();
-      granted = permission === "granted";
-    }
-    return granted;
-  } catch {
-    return false;
-  }
-}
-
 async function fireWarning() {
-  const granted = await ensureNotificationPermission();
-  if (!granted) {
+  const sent = await notifyUser(
+    "Chronoward",
+    "Distraction detected. Get back to work!",
+  );
+  if (!sent) {
     console.log("[chronoward] distraction warning (notification unavailable)");
-    return;
   }
-  sendNotification({
-    title: "Chronoward",
-    body: "Distraction detected. Get back to work!",
-  });
 }
 
 async function fireBlock() {

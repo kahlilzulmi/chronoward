@@ -20,6 +20,7 @@ pub struct WindowContext {
     pub app_name: String,
     pub window_title: String,
     pub url: String,
+    pub device_type: String,
 }
 
 impl WindowContext {
@@ -28,6 +29,7 @@ impl WindowContext {
             app_name: String::new(),
             window_title: String::new(),
             url: String::new(),
+            device_type: "desktop".into(),
         }
     }
 }
@@ -71,6 +73,7 @@ pub fn get_active_window_context() -> WindowContext {
         app_name,
         window_title,
         url,
+        device_type: "desktop".into(),
     }
 }
 
@@ -92,8 +95,7 @@ fn process_app_name(hwnd: HWND) -> Option<String> {
         return None;
     }
 
-    let handle =
-        unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) }.ok()?;
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) }.ok()?;
     let mut buf = [0u16; 260];
     let mut size = buf.len() as u32;
     let result = unsafe {
