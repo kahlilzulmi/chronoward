@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-insert-app-usage"
+description = "Insert a usage slice through the typed Rust command (no JS SQL)."
+commands.allow = ["insert_app_usage"]
+
+[[permission]]
+identifier = "allow-get-aggregated-usage"
+description = "Read aggregated usage through the typed Rust command (no JS SQL)."
+commands.allow = ["get_aggregated_usage"]

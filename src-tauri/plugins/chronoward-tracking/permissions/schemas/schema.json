@@ -331,6 +331,42 @@
           "markdownDescription": "Denies the clear_ongoing_notification command without any pre-configured scope."
         },
         {
+          "description": "Enables the drive_appdata_download command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-drive-appdata-download",
+          "markdownDescription": "Enables the drive_appdata_download command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the drive_appdata_download command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-drive-appdata-download",
+          "markdownDescription": "Denies the drive_appdata_download command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the drive_appdata_upload command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-drive-appdata-upload",
+          "markdownDescription": "Enables the drive_appdata_upload command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the drive_appdata_upload command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-drive-appdata-upload",
+          "markdownDescription": "Denies the drive_appdata_upload command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the google_sign_in command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-google-sign-in",
+          "markdownDescription": "Enables the google_sign_in command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the google_sign_in command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-google-sign-in",
+          "markdownDescription": "Denies the google_sign_in command without any pre-configured scope."
+        },
+        {
           "description": "Enables the register_listener command without any pre-configured scope.",
           "type": "string",
           "const": "allow-register-listener",
@@ -391,10 +427,10 @@
           "markdownDescription": "Denies the update_notification_state command without any pre-configured scope."
         },
         {
-          "description": "Allow Chronoward to check Android tracking permissions, listen for context events, schedule exact pre-alert alarms, and control the ongoing timer notification\n#### This default permission set includes:\n\n- `allow-check-permissions`\n- `allow-request-permissions`\n- `allow-register-listener`\n- `allow-schedule-exact-alarm`\n- `allow-cancel-exact-alarm`\n- `allow-start-ongoing-notification`\n- `allow-update-notification-state`\n- `allow-clear-ongoing-notification`",
+          "description": "Allow Chronoward to check Android tracking permissions, listen for context events, schedule exact pre-alert alarms, control the ongoing timer notification, and start native Google sign-in\n#### This default permission set includes:\n\n- `allow-check-permissions`\n- `allow-request-permissions`\n- `allow-register-listener`\n- `allow-schedule-exact-alarm`\n- `allow-cancel-exact-alarm`\n- `allow-start-ongoing-notification`\n- `allow-update-notification-state`\n- `allow-clear-ongoing-notification`\n- `allow-google-sign-in`\n- `allow-drive-appdata-download`\n- `allow-drive-appdata-upload`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allow Chronoward to check Android tracking permissions, listen for context events, schedule exact pre-alert alarms, and control the ongoing timer notification\n#### This default permission set includes:\n\n- `allow-check-permissions`\n- `allow-request-permissions`\n- `allow-register-listener`\n- `allow-schedule-exact-alarm`\n- `allow-cancel-exact-alarm`\n- `allow-start-ongoing-notification`\n- `allow-update-notification-state`\n- `allow-clear-ongoing-notification`"
+          "markdownDescription": "Allow Chronoward to check Android tracking permissions, listen for context events, schedule exact pre-alert alarms, control the ongoing timer notification, and start native Google sign-in\n#### This default permission set includes:\n\n- `allow-check-permissions`\n- `allow-request-permissions`\n- `allow-register-listener`\n- `allow-schedule-exact-alarm`\n- `allow-cancel-exact-alarm`\n- `allow-start-ongoing-notification`\n- `allow-update-notification-state`\n- `allow-clear-ongoing-notification`\n- `allow-google-sign-in`\n- `allow-drive-appdata-download`\n- `allow-drive-appdata-upload`"
         }
       ]
     }

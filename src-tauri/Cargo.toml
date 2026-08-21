@@ -22,6 +22,9 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+tokio = { version = "1", default-features = false, features = ["sync"] }
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "sqlite"] }
 tauri-plugin-notification = "2.3.3"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-chronoward-tracking = { path = "plugins/chronoward-tracking" }
@@ -43,8 +46,11 @@ windows = { version = "0.62.2", features = [
 # websocket stays desktop-only: rustls/ring cannot find NDK clang.exe on Windows.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 axum = { version = "0.8", features = ["ws"] }
+base64 = "0.22"
 local-ip-address = "0.6"
 rand = "0.9"
+reqwest = { version = "0.12", default-features = false, features = ["native-tls"] }
+sha2 = "0.10"
 tokio = { version = "1", features = ["macros", "net", "sync", "time"] }
 tauri-plugin-websocket = "2"
 

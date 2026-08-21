@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import TimerView from "../views/TimerView.vue";
 import SettingsView from "../views/SettingsView.vue";
+import HelpView from "../views/HelpView.vue";
 import OnboardingGate from "../views/OnboardingGate.vue";
 import { useAndroidTrackingPermissions } from "../composables/useAndroidTrackingPermissions";
 
@@ -9,6 +10,7 @@ const router = createRouter({
   routes: [
     { path: "/", name: "timer", component: TimerView },
     { path: "/settings", name: "settings", component: SettingsView },
+    { path: "/help", name: "help", component: HelpView },
     { path: "/onboarding", name: "onboarding", component: OnboardingGate },
   ],
 });

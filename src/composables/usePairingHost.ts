@@ -6,6 +6,7 @@ export type PairingHostInfo = {
   ip: string;
   port: number;
   pin: string;
+  expiresInSeconds?: number;
 };
 
 const isPaired = ref(false);
@@ -56,12 +57,34 @@ export function usePairingHost(enabled: boolean) {
     }
   }
 
+  async function stopPairingMode() {
+    if (!enabled) {
+      return;
+    }
+    pairingBusy.value = true;
+    try {
+      await invoke("stop_pairing_mode");
+      pairingHost.value = null;
+      isPaired.value = false;
+    } catch (error) {
+      pairingError.value = formatInvokeError(error);
+    } finally {
+      pairingBusy.value = false;
+    }
+  }
+
   onMounted(() => {
     if (enabled) {
       bindPairingEvents();
     }
-    void startPairingMode();
   });
 
-  return { pairingHost, pairingError, pairingBusy, isPaired, startPairingMode };
+  return {
+    pairingHost,
+    pairingError,
+    pairingBusy,
+    isPaired,
+    startPairingMode,
+    stopPairingMode,
+  };
 }

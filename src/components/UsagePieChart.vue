@@ -196,7 +196,7 @@ watch([dateRange, deviceType], () => {
         v-else-if="!hasData"
         class="py-10 text-center text-sm text-slate-400"
       >
-        No app usage yet for this period.
+        No app usage yet for this period. All Devices merges after Drive sync.
       </p>
       <div v-else class="relative h-56 w-full">
         <Doughnut :data="chartData" :options="chartOptions" />

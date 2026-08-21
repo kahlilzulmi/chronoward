@@ -403,3 +403,70 @@
 - Pinning the daemon to JBR 25 — Gradle 8.14 Groovy/ASM cannot load Java 25 class files.
 - Re-enabling Foojay auto-download — hangs when `api.foojay.io` is slow/blocked; JDK 21 is already on disk.
 - Deleting the duplicate `app/src/main/java/com/chronoward/tracking/**` copies — user confirmation required. `java.exclude` is not enough (KT-41142); `KotlinCompile.exclude` is applied in `app/build.gradle.kts`.
+
+## 2026-08-19 — Private beta (Approach A) + Google bind (G3)
+
+**What was decided:** Ship a private beta first. Public/Play comes only after the user is satisfied. Device bind is G3: Sign in with Google + Drive application data folder (same `sub` on Windows and Android). Local `sqlite:chronoward.db` stays the cache. LAN PIN/QR on 1422 becomes a same-Wi-Fi fallback, not the source of truth. Iteration 1 does not call Google APIs.
+
+**Why:** All Devices is a lie without a shared ledger. Drive appdata avoids running a Chronoward backend. Firebase/Firestore (G2) was rejected as the default because usage/URLs would live in our Google Cloud project. Identity-only (G1) was rejected because it does not merge the two databases.
+
+**What was rejected and why:**
+- Going public/Play in this iteration — `USE_EXACT_ALARM`, Data safety, and store listings wait.
+- Drive REST from Rust on the Android NDK target — same ring/clang failure as websocket; Android Drive comes later in Kotlin.
+- Auto-listening on `0.0.0.0:1422` at process start — pairing binds only after Start pairing.
+- `sql:allow-execute` / JS SELECT — usage insert and aggregate are Rust commands.
+
+**Uncertainties:** OAuth client IDs must be created in Google Cloud Console by the user (G3.0) before G3.1 sign-in can succeed.
+
+## 2026-08-19 — G3.1 Google sign-in (no Drive)
+
+**What was decided:** After Cloud Console, iteration 2 stores Google `sub` + email locally. Desktop uses OAuth 2.0 PKCE in the system browser and a `127.0.0.1` loopback. Android uses `play-services-auth` Google Sign-In in `TrackingPlugin`, then `google_complete_sign_in`. Scopes this slice: `openid email profile` only. ID token payload is parsed for `sub`/`email`/`aud`/`iss`; JWKS signature verify is not in this slice. Refresh tokens are not stored. Drive REST is not called. Account file is `google_account.json` (migrates legacy plaintext `google_sub`). Client IDs are compiled from gitignored `src-tauri/google-oauth.json` via `build.rs` (falls back to the example file).
+
+**Why:** Same `sub` on PC and phone is the bind. Drive appdata stays G3.3. Android must not call Google from NDK Rust (ring/clang). Credential Manager still wants a Web client as `serverClientId`; we pass `webClientId` or Desktop ID.
+
+**What was rejected and why:**
+- Drive upload in this slice — user asked for sign-in first.
+- rustls reqwest on Android — same NDK failure as websocket; token POST is desktop-only `native-tls`.
+- Storing refresh tokens in plaintext — not needed until Drive sync.
+- Editing duplicate Kotlin under `src-tauri/gen/android/app/.../tracking/` — plugin source is the source of truth.
+
+**Uncertainties:** The Desktop client ID in `google-oauth.json` does not match Google's usual `PROJECTNUMBER-xxxxx.apps.googleusercontent.com` shape. Token exchange may also need `desktopClientSecret`. Android ID tokens usually need a **Web** client as `webClientId`. Debug SHA-1 for the Android client is `BD:68:60:7A:0B:40:39:BC:F9:31:7C:EC:3C:0B:1A:05:AB:9A:0F:91`, package `com.chronoward.app`.
+
+**Follow-up 2026-08-19:** Windows Google 400 ("incomplete request") was `cmd /C start` truncating the OAuth URL at `&`. Browser open now uses `tauri_plugin_opener::open_url` (`ShellExecute` / `open` crate). Cancel / `access_denied` aborts the loopback wait immediately (does not `join.await` the axum server forever) and Settings shows a Cancel button while waiting.
+
+**Confirmed 2026-08-19:** Desktop G3.1 sign-in works. The Desktop client ID must be `PROJECTNUMBER-xxxxx.apps.googleusercontent.com` (not a secret with `.apps.googleusercontent.com` appended). Token POST requires `desktopClientSecret` in gitignored `google-oauth.json`, then a rebuild. Android sign-in and Drive appdata sync are still unverified. Do not commit `google-oauth.json`.
+
+## 2026-08-19 — Web client secret stays out of the app
+
+**What was decided:** `google-oauth.json` may contain `webClientId` (public) and `desktopClientSecret` (installed-app secret, treated as non-confidential by Google). It must not contain the Web application client secret.
+
+**Why:** Android Google Sign-In only needs the Web client ID as `serverClientId` / `requestIdToken`. The Web secret is a confidential-server credential. `build.rs` embeds the JSON in the Windows exe and the APK, so a Web secret would ship to every device. Chronoward has no backend to hold it. Drive appdata later uses the user ID token / desktop refresh, not a Web secret.
+
+**What was rejected and why:**
+- `webClientSecret` next to `webClientId` — looks symmetric with Desktop, but Web secrets are not equivalent to Desktop secrets.
+- Using the Web secret for desktop PKCE — Desktop already has its own client + secret.
+
+## 2026-08-19 — G3.3 Drive appDataFolder (approach A)
+
+**What was decided:** One `usage.jsonl` in Drive application data folder. Merge by `uuid` (local wins). URLs are never written to Drive. Desktop uses `reqwest` + refresh token (`access_type=offline`, `prompt=consent` if no refresh yet). Android uses Kotlin `HttpURLConnection` + `GoogleAuthUtil` in `TrackingPlugin`; merge stays in Rust (`google_merge_usage_jsonl`). Sync on sign-in, Settings **Sync now**, desktop every 15 minutes, Android interval from `App.vue`. Refresh token lives in app-config `google_account.json` (private beta; not Web secret).
+
+**Why:** Same `sub` on PC and phone needs a shared ledger without a Chronoward backend.
+
+**What was rejected and why:**
+- Monthly chunk files (B) — extra Drive list/create for a private beta.
+- Desktop-only (C) — user chose A, so Android Kotlin path shipped in the same design.
+- Drive REST from Android Rust — ring/clang.
+
+**Uncertainties:** Existing desktop sessions have no refresh token until **Sign in with Google** again. Android still needs a real `webClientId`. OAuth consent screen must include `drive.appdata`. Refresh tokens in plaintext config are a private-beta limitation.
+
+## 2026-08-19 — Contributor docs live in README + CONTRIBUTING
+
+**What was decided:** `README.md` is the product/setup landing page. `CONTRIBUTING.md` is the developer handbook (architecture, ports, invariants, Android/Google landmines, PR checklist). `MEMORY.md` stays the decision log; `ERRORS.md` stays failed approaches.
+
+**Why:** The previous README was still the Tauri Vue template. A second contributor needs run commands and “do not contradict” rules without reading the whole session history.
+
+**What was rejected and why:**
+- One giant `CONTRIBUTING.md` only — weaker GitHub landing page.
+- Split `docs/` (setup / architecture / android / windows) — more files to drift from MEMORY.
+
+

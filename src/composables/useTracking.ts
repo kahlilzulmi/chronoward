@@ -1,8 +1,8 @@
 import { onUnmounted } from "vue";
-import Database from "@tauri-apps/plugin-sql";
+import { invoke } from "@tauri-apps/api/core";
+import { settings } from "./useSettings";
 
 const DURATION_THRESHOLD_SECONDS = 2;
-const DB_PATH = "sqlite:chronoward.db";
 
 export interface UsageLogPayload {
   app_name: string;
@@ -20,7 +20,6 @@ type TrackedContext = {
 
 let currentContext: TrackedContext | null = null;
 let contextStartTime: number | null = null;
-let dbPromise: Promise<Database> | null = null;
 
 function isEmptyContext(context: {
   app_name?: string;
@@ -37,31 +36,17 @@ function isoNow(): string {
   return new Date().toISOString();
 }
 
-async function getDb(): Promise<Database> {
-  if (!dbPromise) {
-    dbPromise = Database.load(DB_PATH);
-  }
-  try {
-    return await dbPromise;
-  } catch (error) {
-    dbPromise = null;
-    throw error;
-  }
-}
-
 export async function saveUsageLog(payload: UsageLogPayload): Promise<void> {
   try {
-    const db = await getDb();
-    await db.execute(
-      "INSERT INTO app_usage (app_name, url, duration_seconds, device_type, timestamp) VALUES ($1, $2, $3, $4, $5)",
-      [
-        payload.app_name,
-        payload.url,
-        payload.duration_seconds,
-        payload.device_type,
-        payload.timestamp,
-      ],
-    );
+    await invoke("insert_app_usage", {
+      payload: {
+        appName: payload.app_name,
+        url: payload.url,
+        durationSeconds: payload.duration_seconds,
+        deviceType: payload.device_type,
+        timestamp: payload.timestamp,
+      },
+    });
   } catch (error) {
     console.error("[chronoward] saveUsageLog failed", error);
   }
@@ -77,7 +62,7 @@ function maybeSaveSlice(nowMs: number): void {
   }
   void saveUsageLog({
     app_name: currentContext.app,
-    url: currentContext.url,
+    url: settings.persistUrls ? currentContext.url : "",
     duration_seconds: Math.floor(elapsed),
     device_type: currentContext.device_type,
     timestamp: isoNow(),

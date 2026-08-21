@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, watch } from "vue";
+import { onMounted, onUnmounted, watch } from "vue";
 import { RouterLink, RouterView, useRouter } from "vue-router";
 import BlockerOverlay from "./components/BlockerOverlay.vue";
 import { useIntervention } from "./composables/useIntervention";
 import { useAndroidTrackingPermissions } from "./composables/useAndroidTrackingPermissions";
 import { useTracking } from "./composables/useTracking";
+import { runDriveSync } from "./composables/useDriveSync";
 
 const { isBlocking } = useIntervention();
 useTracking();
@@ -12,8 +13,21 @@ const router = useRouter();
 const { isAndroid, isLoaded, needsUsageAccess, fetchStatus } =
   useAndroidTrackingPermissions();
 
+let driveTimer: ReturnType<typeof setInterval> | undefined;
+
 onMounted(() => {
   void fetchStatus();
+  if (isAndroid.value) {
+    driveTimer = setInterval(() => {
+      void runDriveSync().catch(() => {});
+    }, 15 * 60 * 1000);
+  }
+});
+
+onUnmounted(() => {
+  if (driveTimer) {
+    clearInterval(driveTimer);
+  }
 });
 
 watch([isLoaded, needsUsageAccess], () => {
@@ -34,10 +48,10 @@ watch([isLoaded, needsUsageAccess], () => {
 <template>
   <div
     class="flex min-h-dvh flex-col bg-stone-100 text-stone-900"
-    style="padding-bottom: env(safe-area-inset-bottom)"
   >
     <header
       class="sticky top-0 z-10 border-b border-stone-200/80 bg-stone-100/90 backdrop-blur-sm"
+      style="padding-top: env(safe-area-inset-top)"
     >
       <div
         class="mx-auto flex w-full max-w-lg items-center justify-between px-4 py-3 sm:max-w-2xl sm:px-6 md:max-w-5xl md:py-4 lg:max-w-6xl"
@@ -90,6 +104,7 @@ watch([isLoaded, needsUsageAccess], () => {
 
     <nav
       class="sticky bottom-0 border-t border-stone-200 bg-white/95 backdrop-blur-sm md:hidden"
+      style="padding-bottom: env(safe-area-inset-bottom)"
       aria-label="Primary"
     >
       <div class="mx-auto grid max-w-lg grid-cols-2 px-2 py-2">

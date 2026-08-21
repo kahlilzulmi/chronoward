@@ -1,0 +1,12 @@
+{
+  "desktopClientId": "YOUR_DESKTOP_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+  "desktopClientSecret": "YOUR_DESKTOP_CLIENT_SECRET",
+  "androidClientId": "YOUR_ANDROID_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+  "webClientId": "YOUR_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+  "scopes": [
+    "openid",
+    "email",
+    "profile",
+    "drive.appdata"
+  ]
+}

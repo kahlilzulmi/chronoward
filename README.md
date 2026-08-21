@@ -1,7 +1,72 @@
-# Tauri + Vue + TypeScript
+# Chronoward
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+A cross-platform Pomodoro timer that tracks which apps and sites you use during work, then syncs that usage across devices.
 
-## Recommended IDE Setup
+**Windows** is the desktop host (foreground window + Chromium URL via UI Automation). **Android** is the phone client (Usage Access for the app name; Accessibility is optional for browser URLs). Identity and usage merge go through **Sign in with Google** and Drive’s application-data folder. Same-Wi-Fi PIN/QR pairing is a fallback, not the source of truth.
 
-- [VS Code](https://code.visualstudio.com/) + [Vue - Official](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+This repo is a **private beta**. It is not published on Google Play.
+
+## Stack
+
+- **UI:** Vue 3 (`<script setup>`) + TypeScript + Vue Router 4 + Tailwind CSS 4
+- **Shell:** Tauri v2 (Rust)
+- **Desktop tracking:** `src-tauri/src/tracker.rs` (Windows-only)
+- **Android tracking:** `src-tauri/plugins/chronoward-tracking` (Kotlin)
+- **Local cache:** SQLite `sqlite:chronoward.db` via `tauri-plugin-sql`
+- **Cloud ledger:** Google Drive `appDataFolder` (`usage.jsonl`)
+
+## Quick start (Windows desktop)
+
+Prerequisites: Node.js 20+, Rust **1.88+** (`rustup update stable`), Visual Studio C++ build tools.
+
+```bat
+npm install
+copy src-tauri\google-oauth.example.json src-tauri\google-oauth.json
+```
+
+Edit `src-tauri/google-oauth.json` with your Google Cloud OAuth client IDs (see [CONTRIBUTING.md](CONTRIBUTING.md#google-sign-in-and-drive-sync)). Then:
+
+```bat
+npm run desktop:dev
+```
+
+Vite is on `http://localhost:1420`. `beforeDevCommand` reuses that server if it is already running, so desktop and Android can share one HMR session.
+
+## Quick start (Android)
+
+Prerequisites: Android Studio, SDK + NDK, an emulator (default AVD `Pixel_7`) or a phone with USB debugging. Gradle must use **JDK 21**, not Android Studio’s bundled JBR 25.
+
+```bat
+npm run android:dev
+```
+
+In a second terminal, with Vite already up:
+
+```bat
+npm run desktop:dev
+```
+
+First Android launch: grant **Usage Access**. Accessibility is optional (“Deep URL Tracking”). Onboarding lives at `/onboarding` and does not block first paint.
+
+Details, ports, and known Android landmines: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## What works today
+
+- Pomodoro clock (work / short break / long break), Settings, Help
+- Windows live sensor + intervention (warning notification or block overlay)
+- Android Usage Access tracking, optional Accessibility URLs, exact pre-alert alarms, ongoing timer notification
+- Local `app_usage` log and dashboard pie chart (today / last 7 days, desktop / mobile / all)
+- Desktop LAN pairing host (PIN + QR on port **1422**) and Android PIN/QR client
+- Google sign-in + Drive appdata usage sync (desktop verified; Android needs a real `webClientId`)
+
+## Docs
+
+| File | Audience |
+| --- | --- |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to run, architecture, invariants, PR checklist |
+| [MEMORY.md](MEMORY.md) | Logged architecture decisions — do not contradict without flagging |
+| [ERRORS.md](ERRORS.md) | Approaches that failed more than twice |
+
+## License / status
+
+Private beta. Do not commit `src-tauri/google-oauth.json`, APKs, or account files.

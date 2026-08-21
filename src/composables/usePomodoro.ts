@@ -368,6 +368,27 @@ function dispatchNotificationAction(payload: unknown) {
   }
 }
 
+function catchUpAfterResume() {
+  if (!isRunning.value || phase.value === "idle") return;
+  const now = Date.now();
+  if (now >= targetEndMs) {
+    remainingSeconds.value = 0;
+    completeCurrent();
+    return;
+  }
+  const nextSeconds = Math.max(0, Math.ceil((targetEndMs - now) / 1000));
+  maybePreAlert(remainingSeconds.value, nextSeconds);
+  remainingSeconds.value = nextSeconds;
+}
+
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      catchUpAfterResume();
+    }
+  });
+}
+
 function startNotificationActionListener() {
   if (notificationActionStarted) {
     return;
@@ -420,8 +441,9 @@ watch(
 );
 
 const formattedTime = computed(() => {
-  const minutes = Math.floor(remainingSeconds.value / 60);
-  const seconds = remainingSeconds.value % 60;
+  const clamped = Math.max(0, remainingSeconds.value);
+  const minutes = Math.floor(clamped / 60);
+  const seconds = clamped % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 });
 

@@ -125,3 +125,14 @@
 
 **Note for next time:**
 - Missing `POST_NOTIFICATIONS` in the merged manifest also makes the notification plugin reject; declare it on the app *and* rebuild the APK. Vite HMR cannot add Android permissions.
+
+## 2026-08-19 — Google OAuth 400 "incomplete request" on Windows
+
+**What didn't work:**
+- `cmd /C start "" <oauth-url>`. `cmd.exe` treats `&` as a command separator, so the browser only opened `https://accounts.google.com/o/oauth2/v2/auth?client_id=...` with no `redirect_uri` / `scope` / PKCE. Google showed 400.
+
+**What worked instead:**
+- `tauri_plugin_opener::open_url` (Windows `ShellExecute` via the `open` crate). Do not pass OAuth query URLs through `cmd start`.
+
+**Note for next time:**
+- If the URL then loads but Google rejects the client, that is a separate issue: Desktop client ID must look like `PROJECTNUMBER-xxxxx.apps.googleusercontent.com`, and token POST often needs `desktopClientSecret`.

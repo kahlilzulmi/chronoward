@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { RouterLink } from "vue-router";
 import QrcodeVue from "qrcode.vue";
 import { usePomodoro } from "../composables/usePomodoro";
 import { useAndroidTrackingPermissions } from "../composables/useAndroidTrackingPermissions";
@@ -7,6 +8,8 @@ import { useLiveSensorStatus } from "../composables/useLiveSensorStatus";
 import { testNotification, requestNotificationPermission, getLastNotificationError } from "../composables/useNotify";
 import { pairingQrJson } from "../composables/usePairingClient";
 import { usePairingHost } from "../composables/usePairingHost";
+import { useGoogleAuth } from "../composables/useGoogleAuth";
+import { useDriveSync } from "../composables/useDriveSync";
 import PairingClient from "../components/PairingClient.vue";
 import {
   clampMinutes,
@@ -25,9 +28,11 @@ const {
   requestPermissions,
 } = useAndroidTrackingPermissions();
 const { sensorStatus: deviceTrackingStatus } = useLiveSensorStatus();
-const { pairingHost, pairingError, pairingBusy, isPaired, startPairingMode } = usePairingHost(
-  !isAndroid.value,
-);
+const { pairingHost, pairingError, pairingBusy, isPaired, startPairingMode, stopPairingMode } =
+  usePairingHost(!isAndroid.value);
+const { status: googleStatus, busy: googleBusy, errorMessage: googleError, cancelled: googleCancelled, refresh: refreshGoogle, signIn, cancelSignIn, signOut } =
+  useGoogleAuth();
+const { syncing: driveSyncing, syncError: driveSyncError, syncNow } = useDriveSync();
 
 const pairingQrValue = computed(() => {
   if (!pairingHost.value) {
@@ -47,6 +52,23 @@ const thisDevice = computed(() => {
 });
 
 const notificationTestHint = ref("");
+
+async function onSyncNow() {
+  try {
+    await syncNow();
+    await refreshGoogle();
+  } catch {
+    await refreshGoogle();
+  }
+}
+
+function formatSyncAt(value: string) {
+  const n = Number(value);
+  if (Number.isFinite(n) && n > 1_000_000_000) {
+    return new Date(n * 1000).toLocaleString();
+  }
+  return value;
+}
 
 async function sendTestNotification() {
   notificationTestHint.value = "Requesting notification permission…";
@@ -173,39 +195,103 @@ onMounted(() => {
             />
           </button>
         </div>
+        <div class="flex items-center justify-between gap-4 border-t border-stone-100 pt-4">
+          <div>
+            <p class="text-sm font-medium text-stone-800 sm:text-base">
+              Save browser URLs in the local log
+            </p>
+            <p class="text-sm text-stone-500">
+              Off by default. App names still log. URLs will not go to Drive when sync ships.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            class="relative h-7 w-12 shrink-0 rounded-full transition"
+            :class="settings.persistUrls ? 'bg-teal-800' : 'bg-stone-300'"
+            :aria-checked="settings.persistUrls"
+            @click="settings.persistUrls = !settings.persistUrls"
+          >
+            <span
+              class="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition"
+              :class="settings.persistUrls ? 'translate-x-5' : 'translate-x-0'"
+            />
+          </button>
+        </div>
       </div>
 
-      <div class="space-y-2">
-        <p class="text-sm font-medium text-stone-800">Troubleshoot</p>
-        <ol class="list-decimal space-y-1.5 pl-5 text-sm text-stone-600">
-          <li v-if="isAndroid">
-            Run <span class="font-mono text-xs">npm run android:dev</span> until
-            <span class="font-mono text-xs">ADB ready: … (device)</span>.
-          </li>
-          <li v-if="isAndroid">
-            Debug UI loads from <span class="font-mono text-xs">http://localhost:1420</span> via
-            <span class="font-mono text-xs">adb reverse</span>. Do not use a frozen emulator window.
-          </li>
-          <li v-if="isAndroid">Grant Usage Access. Accessibility is optional for URL tracking.</li>
-          <li v-if="!isAndroid">
-            Run <span class="font-mono text-xs">npm run desktop:dev</span> (or
-            <span class="font-mono text-xs">npm run tauri dev</span>) so the Windows tracker can emit live context.
-          </li>
-          <li>
-            PC and emulator share one Vite on port 1420. Start
-            <span class="font-mono text-xs">npm run android:dev</span>, then in a second terminal
-            <span class="font-mono text-xs">npm run desktop:dev</span>. Do not start a second
-            <span class="font-mono text-xs">npm run dev</span>.
-          </li>
-          <li>If the dashboard chrome shows but the main pane is empty, force-stop Chronoward and reopen after Vite is up.</li>
-        </ol>
+      <div class="border-t border-stone-100 pt-4">
+        <RouterLink
+          to="/help"
+          class="text-sm font-medium text-teal-800 hover:underline"
+        >
+          Help &amp; Troubleshooting →
+        </RouterLink>
+      </div>
+
+      <div class="space-y-3 border-t border-stone-100 pt-4">
+        <div>
+          <p class="text-sm font-medium text-stone-800">Google account</p>
+          <p class="mt-1 text-sm text-stone-500">
+            Same Google account on this PC and your phone is how All Devices merges via Drive
+            app data. URLs are not uploaded. Sign in again on this PC to grant Drive if Sync now
+            asks for consent.
+          </p>
+        </div>
+        <p v-if="googleStatus?.signedIn" class="text-sm text-teal-800">
+          Signed in{{ googleStatus.email ? ` as ${googleStatus.email}` : "" }}.
+        </p>
+        <p v-else class="text-sm text-stone-500">Not signed in.</p>
+        <p class="text-xs text-stone-500">{{ googleStatus?.nextStep }}</p>
+        <p v-if="googleError" class="text-sm text-amber-800">{{ googleError }}</p>
+        <p v-else-if="googleCancelled" class="text-sm text-stone-500">Sign-in cancelled.</p>
+        <p v-else-if="googleBusy" class="text-sm text-stone-500">Waiting for Google…</p>
+        <p v-if="googleStatus?.lastSyncAt" class="text-xs text-stone-500">
+          Last sync: {{ formatSyncAt(googleStatus.lastSyncAt) }}
+        </p>
+        <p v-if="driveSyncError" class="text-sm text-amber-800">{{ driveSyncError }}</p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="min-h-11 rounded-xl border border-stone-300 bg-stone-50 px-4 text-sm font-semibold text-stone-700"
+            :disabled="googleBusy"
+            @click="signIn"
+          >
+            Sign in with Google
+          </button>
+          <button
+            v-if="googleBusy"
+            type="button"
+            class="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700"
+            @click="cancelSignIn"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700"
+            :disabled="googleBusy || driveSyncing || !googleStatus?.signedIn"
+            @click="signOut"
+          >
+            Sign out
+          </button>
+          <button
+            type="button"
+            class="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700"
+            :disabled="googleBusy || driveSyncing || !googleStatus?.signedIn"
+            @click="onSyncNow"
+          >
+            {{ driveSyncing ? "Syncing…" : "Sync now" }}
+          </button>
+        </div>
       </div>
 
       <div class="space-y-3 border-t border-stone-100 pt-4">
         <div>
           <p class="text-sm font-medium text-stone-800">Pair another device</p>
           <p class="mt-1 text-sm text-stone-500">
-            Same Wi-Fi. Scan the QR on Android, or type the 6-digit PIN.
+            Same-Wi-Fi fallback. Drive is the bind once both devices are signed in. The pairing
+            port is closed until you start pairing. PIN lasts 10 minutes and locks after 8 failures.
           </p>
         </div>
 
@@ -233,6 +319,9 @@ onMounted(() => {
             <p class="mt-2 font-mono text-xs text-stone-500">
               {{ pairingHost.ip }}:{{ pairingHost.port }}
             </p>
+            <p v-if="pairingHost.expiresInSeconds" class="mt-1 text-xs text-stone-400">
+              PIN expires in {{ pairingHost.expiresInSeconds }}s
+            </p>
             <p
               v-if="isPaired"
               class="mt-3 text-sm font-semibold uppercase tracking-[0.2em] text-teal-800"
@@ -241,15 +330,26 @@ onMounted(() => {
             </p>
           </div>
           <p v-else-if="pairingError" class="text-sm text-amber-800">{{ pairingError }}</p>
-          <p v-else class="text-sm text-stone-500">Starting pairing host…</p>
-          <button
-            type="button"
-            class="min-h-11 w-full rounded-xl border border-stone-300 bg-stone-50 px-4 text-sm font-semibold text-stone-700"
-            :disabled="pairingBusy"
-            @click="startPairingMode"
-          >
-            New PIN
-          </button>
+          <p v-else class="text-sm text-stone-500">Pairing is off. Start it only when the phone is nearby.</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="min-h-11 flex-1 rounded-xl border border-stone-300 bg-stone-50 px-4 text-sm font-semibold text-stone-700"
+              :disabled="pairingBusy"
+              @click="startPairingMode"
+            >
+              {{ pairingHost ? "New PIN" : "Start pairing" }}
+            </button>
+            <button
+              v-if="pairingHost"
+              type="button"
+              class="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700"
+              :disabled="pairingBusy"
+              @click="stopPairingMode"
+            >
+              Stop pairing
+            </button>
+          </div>
         </template>
         <PairingClient v-else />
       </div>
@@ -269,42 +369,6 @@ onMounted(() => {
           @click="requestPermissions(false)"
         >
           Grant Usage Access
-        </button>
-        <button
-          type="button"
-          class="min-h-11 rounded-xl border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-900"
-          @click="fetchStatus"
-        >
-          Recheck
-        </button>
-      </div>
-    </div>
-
-    <div
-      v-if="isAndroid && isLoaded && !needsUsageAccess"
-      class="space-y-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6"
-    >
-      <p class="text-sm font-medium text-stone-800">Browser URL tracking (optional)</p>
-      <p class="text-sm text-stone-500">
-        Accessibility can read the address bar. Leave it off if you use banking apps.
-      </p>
-      <p class="text-xs font-mono text-stone-500">
-        {{ needsAccessibility ? "Accessibility: off" : "Accessibility: on" }}
-      </p>
-      <div class="flex flex-wrap gap-2">
-        <button
-          type="button"
-          class="min-h-11 rounded-xl border border-stone-300 bg-stone-50 px-4 text-sm font-semibold text-stone-700"
-          @click="requestPermissions(true)"
-        >
-          Open Accessibility Settings
-        </button>
-        <button
-          type="button"
-          class="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700"
-          @click="fetchStatus"
-        >
-          Recheck
         </button>
       </div>
     </div>

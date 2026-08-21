@@ -9,6 +9,16 @@
   ],
   "permissions": [
     "barcode-scanner:default",
-    "barcode-scanner:allow-scan"
+    "barcode-scanner:allow-scan",
+    "chronoward-tracking:default",
+    "allow-insert-app-usage",
+    "allow-get-aggregated-usage",
+    "allow-google-auth-status",
+    "allow-google-sign-in",
+    "allow-google-complete-sign-in",
+    "allow-google-cancel-sign-in",
+    "allow-google-sign-out",
+    "allow-google-sync-drive",
+    "allow-google-merge-usage-jsonl"
   ]
 }

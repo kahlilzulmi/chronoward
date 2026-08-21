@@ -1,0 +1,34 @@
+[[permission]]
+identifier = "allow-google-auth-status"
+description = "Read whether Google OAuth is configured and if a sub is stored."
+commands.allow = ["google_auth_status"]
+
+[[permission]]
+identifier = "allow-google-sign-in"
+description = "Start Google OAuth on desktop (PKCE + loopback)."
+commands.allow = ["google_sign_in"]
+
+[[permission]]
+identifier = "allow-google-complete-sign-in"
+description = "Persist Google sub and email after native Android sign-in."
+commands.allow = ["google_complete_sign_in"]
+
+[[permission]]
+identifier = "allow-google-cancel-sign-in"
+description = "Abort an in-progress desktop Google OAuth wait without hanging the UI."
+commands.allow = ["google_cancel_sign_in"]
+
+[[permission]]
+identifier = "allow-google-sign-out"
+description = "Clear the locally stored Google sub."
+commands.allow = ["google_sign_out"]
+
+[[permission]]
+identifier = "allow-google-sync-drive"
+description = "Pull/merge/push usage.jsonl in Google Drive appDataFolder (desktop HTTP)."
+commands.allow = ["google_sync_drive"]
+
+[[permission]]
+identifier = "allow-google-merge-usage-jsonl"
+description = "Merge remote Drive usage JSONL into local SQLite and return the union."
+commands.allow = ["google_merge_usage_jsonl"]

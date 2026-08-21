@@ -2,3 +2,8 @@
 identifier = "allow-start-pairing-mode"
 description = "Enables the start_pairing_mode command so the desktop can host LAN pairing."
 commands.allow = ["start_pairing_mode"]
+
+[[permission]]
+identifier = "allow-stop-pairing-mode"
+description = "Stops LAN pairing, drops the PIN, and unbinds the WebSocket."
+commands.allow = ["stop_pairing_mode"]

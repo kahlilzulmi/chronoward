@@ -1,6 +1,6 @@
 ## Default Permission
 
-Allow Chronoward to check Android tracking permissions, listen for context events, schedule exact pre-alert alarms, and control the ongoing timer notification
+Allow Chronoward to check Android tracking permissions, listen for context events, schedule exact pre-alert alarms, control the ongoing timer notification, and start native Google sign-in
 
 #### This default permission set includes the following:
 
@@ -12,6 +12,9 @@ Allow Chronoward to check Android tracking permissions, listen for context event
 - `allow-start-ongoing-notification`
 - `allow-update-notification-state`
 - `allow-clear-ongoing-notification`
+- `allow-google-sign-in`
+- `allow-drive-appdata-download`
+- `allow-drive-appdata-upload`
 
 ## Permission Table
 
@@ -96,6 +99,84 @@ Enables the clear_ongoing_notification command without any pre-configured scope.
 <td>
 
 Denies the clear_ongoing_notification command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`chronoward-tracking:allow-drive-appdata-download`
+
+</td>
+<td>
+
+Enables the drive_appdata_download command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`chronoward-tracking:deny-drive-appdata-download`
+
+</td>
+<td>
+
+Denies the drive_appdata_download command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`chronoward-tracking:allow-drive-appdata-upload`
+
+</td>
+<td>
+
+Enables the drive_appdata_upload command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`chronoward-tracking:deny-drive-appdata-upload`
+
+</td>
+<td>
+
+Denies the drive_appdata_upload command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`chronoward-tracking:allow-google-sign-in`
+
+</td>
+<td>
+
+Enables the google_sign_in command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`chronoward-tracking:deny-google-sign-in`
+
+</td>
+<td>
+
+Denies the google_sign_in command without any pre-configured scope.
 
 </td>
 </tr>

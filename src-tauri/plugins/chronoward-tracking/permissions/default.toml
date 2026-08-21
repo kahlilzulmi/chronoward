@@ -1,7 +1,7 @@
 "$schema" = "schemas/schema.json"
 
 [default]
-description = "Allow Chronoward to check Android tracking permissions, listen for context events, schedule exact pre-alert alarms, and control the ongoing timer notification"
+description = "Allow Chronoward to check Android tracking permissions, listen for context events, schedule exact pre-alert alarms, control the ongoing timer notification, and start native Google sign-in"
 permissions = [
     "allow-check-permissions",
     "allow-request-permissions",
@@ -11,4 +11,7 @@ permissions = [
     "allow-start-ongoing-notification",
     "allow-update-notification-state",
     "allow-clear-ongoing-notification",
+    "allow-google-sign-in",
+    "allow-drive-appdata-download",
+    "allow-drive-appdata-upload",
 ]

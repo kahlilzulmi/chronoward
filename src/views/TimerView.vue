@@ -162,9 +162,9 @@ onUnmounted(() => {
         <button
           type="button"
           class="min-h-10 rounded-xl border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-900"
-          @click="fetchStatus"
+          @click="accessibilityBannerDismissed = true"
         >
-          Recheck
+          Dismiss
         </button>
       </div>
     </div>
