@@ -137,9 +137,13 @@ watch([dateRange, deviceType], () => {
 
 <template>
   <article class="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-slate-100">
-    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-      Analytics
-    </p>
+    <div class="mb-4 flex items-center gap-2">
+      <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 7v5l3 2" stroke-linecap="round" />
+      </svg>
+      <p class="text-sm font-semibold text-slate-100">Screen Time</p>
+    </div>
 
     <div class="mt-4 space-y-2">
       <div class="flex flex-wrap gap-1" role="group" aria-label="Date range">

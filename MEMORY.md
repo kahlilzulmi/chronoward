@@ -523,4 +523,25 @@
 - Adding a npm script that shells the full Android release pipeline — env (JDK 21 path) is machine-specific; document first.
 - Deleting APKs from disk — user may still need them; gitignore is enough.
 
+## 2026-08-22 — UI/UX overhaul spec + Phase 1 shell
+
+**What was decided:** Full-nav scope (Dashboard, Sessions, Tasks, Insights) with minimal page content first. Phase 1 ships app shell only: dark-default theme + light toggle (Profile hub), desktop left sidebar, mobile 5-tab bar (Dashboard · Sessions · Tasks · Insights · Profile), Profile hub (display name localStorage + Supabase auth name when present, Settings/Help links, theme). Settings removed from primary nav — accessed via Profile. Shield-outline SVG logo placeholder until user provides asset. Stub pages for Sessions/Tasks/Insights until Phase 2.
+
+**Phase 2 (next):** Dashboard mockup — circular timer, phase tabs (switch anytime, reset duration), icon controls + +5 min (running/paused), local task pill; Live Tracking card (this device + paired device when connected); compact Screen Time summary on dashboard, full chart on Insights; Sessions history (localStorage log); Tasks CRUD.
+
+**Why:** User mockup is a major layout shift; shell first avoids rewriting timer/tracking in one risky pass.
+
+**What was rejected and why:**
+- Dashboard-only polish without nav routes — user chose full nav (option C).
+- Mock second device in Live Tracking — user chose real paired device only when connected.
+
+## 2026-08-22 — UI Phase 2 dashboard
+
+**What was decided:** Ship mockup-aligned dashboard: circular timer with phase tabs (switch anytime, reset duration), icon controls (+5 / pause / skip), local task picker on timer, Live Tracking card (this device + paired row when connected), compact Screen Time summary on dashboard, full chart on Insights, Sessions history (localStorage log on phase complete/skip), Tasks CRUD page, logo from `src/assets/logo.svg`.
+
+**Why:** Phase 1 shell was in place; Phase 2 delivers the visible mockup experience without waiting on PowerSync.
+
+**What was rejected and why:**
+- Remote live context on paired device row — no cross-device sensor stream yet; show Connected + sync note only.
+
 

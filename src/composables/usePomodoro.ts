@@ -12,8 +12,11 @@ import {
   startOngoingNotification,
   updateOngoingNotification,
 } from "./useOngoingNotification";
+import { logSessionComplete } from "./useSessionHistory";
+import { useTasks } from "./useTasks";
 
 export type PomodoroPhase = "idle" | "work" | "shortBreak" | "longBreak";
+export type PomodoroTab = "work" | "shortBreak" | "longBreak";
 
 const PRE_ALERT_SECONDS = 60;
 const TICK_MS = 200;
@@ -51,7 +54,7 @@ let targetEndMs = 0;
 let preAlertFired = false;
 let nativePreAlertArmed = false;
 let nativePreAlertEpoch = 0;
-let sessionDurationSeconds = settings.workMinutes * 60;
+const sessionTotalSeconds = ref(settings.workMinutes * 60);
 /** Suppress phase-start notifications while replaying missed time after kill. */
 let suppressPhaseNotify = false;
 
@@ -95,7 +98,7 @@ function persistTimerSnapshot() {
     isRunning: isRunning.value,
     targetEndMs: isRunning.value ? targetEndMs : 0,
     remainingSeconds: remainingSeconds.value,
-    sessionDurationSeconds,
+    sessionDurationSeconds: sessionTotalSeconds.value,
     completedWorkCount: completedWorkCount.value,
     focusedSecondsCompleted: focusedSecondsCompleted.value,
     preAlertFired,
@@ -316,8 +319,8 @@ function startTicking(fromResume = false, preserveTarget = false) {
 function enterPhase(nextPhase: PomodoroPhase, autoRun: boolean) {
   clearTick();
   phase.value = nextPhase;
-  sessionDurationSeconds = durationSecondsFor(nextPhase);
-  remainingSeconds.value = sessionDurationSeconds;
+  sessionTotalSeconds.value = durationSecondsFor(nextPhase);
+  remainingSeconds.value = sessionTotalSeconds.value;
   isRunning.value = false;
   armPreAlert();
 
@@ -361,7 +364,7 @@ function catchUpFromExpiredEnd(phaseEndedAtMs: number) {
   try {
     for (let i = 0; i < CATCH_UP_GUARD; i += 1) {
       if (phase.value === "work") {
-        focusedSecondsCompleted.value += sessionDurationSeconds;
+        focusedSecondsCompleted.value += sessionTotalSeconds.value;
         completedWorkCount.value += 1;
         const next = nextBreakPhase();
         if (!settings.autoStartBreaks) {
@@ -369,20 +372,20 @@ function catchUpFromExpiredEnd(phaseEndedAtMs: number) {
           return;
         }
         phase.value = next;
-        sessionDurationSeconds = durationSecondsFor(next);
+        sessionTotalSeconds.value = durationSecondsFor(next);
       } else if (phase.value === "shortBreak" || phase.value === "longBreak") {
         if (!settings.autoStartWork) {
           enterPhase("idle", false);
           return;
         }
         phase.value = "work";
-        sessionDurationSeconds = durationSecondsFor("work");
+        sessionTotalSeconds.value = durationSecondsFor("work");
       } else {
         enterPhase("idle", false);
         return;
       }
 
-      const nextEnd = cursor + sessionDurationSeconds * 1000;
+      const nextEnd = cursor + sessionTotalSeconds.value * 1000;
       if (nextEnd > now) {
         targetEndMs = nextEnd;
         remainingSeconds.value = Math.max(
@@ -404,9 +407,25 @@ function catchUpFromExpiredEnd(phaseEndedAtMs: number) {
   }
 }
 
+function logCompletedPhase() {
+  if (phase.value !== "work" && phase.value !== "shortBreak" && phase.value !== "longBreak") {
+    return;
+  }
+  const elapsed = Math.max(0, sessionTotalSeconds.value - remainingSeconds.value);
+  const durationSeconds = elapsed > 0 ? elapsed : sessionTotalSeconds.value;
+  const { activeTask } = useTasks();
+  logSessionComplete({
+    kind: phase.value,
+    durationSeconds,
+    taskTitle: phase.value === "work" ? activeTask.value?.title : undefined,
+  });
+}
+
 function completeCurrent() {
+  logCompletedPhase();
+
   if (phase.value === "work") {
-    const elapsed = Math.max(0, sessionDurationSeconds - remainingSeconds.value);
+    const elapsed = Math.max(0, sessionTotalSeconds.value - remainingSeconds.value);
     focusedSecondsCompleted.value += elapsed;
     completedWorkCount.value += 1;
     enterPhase(nextBreakPhase(), settings.autoStartBreaks);
@@ -480,6 +499,7 @@ function addFiveMinutes() {
     );
   }
   remainingSeconds.value += ADD_FIVE_MINUTES_SECONDS;
+  sessionTotalSeconds.value += ADD_FIVE_MINUTES_SECONDS;
   if (isRunning.value) {
     targetEndMs += ADD_FIVE_MINUTES_MS;
   }
@@ -496,6 +516,27 @@ function addFiveMinutes() {
 
 function reset() {
   enterPhase("idle", false);
+}
+
+function selectPhase(tab: PomodoroTab) {
+  const wasRunning = isRunning.value;
+  clearTick();
+  disarmNativePreAlert();
+  phase.value = tab;
+  sessionTotalSeconds.value = durationSecondsFor(tab);
+  remainingSeconds.value = sessionTotalSeconds.value;
+  preAlertFired = false;
+  armPreAlert();
+
+  if (wasRunning) {
+    startTicking();
+    return;
+  }
+
+  isRunning.value = false;
+  targetEndMs = 0;
+  syncNativeUpdate(true);
+  persistTimerSnapshot();
 }
 
 function catchUpAfterResume() {
@@ -523,7 +564,7 @@ function hydrateTimerFromStorage() {
   }
 
   phase.value = snap.phase;
-  sessionDurationSeconds = snap.sessionDurationSeconds;
+  sessionTotalSeconds.value = snap.sessionDurationSeconds;
   completedWorkCount.value = snap.completedWorkCount;
   focusedSecondsCompleted.value = snap.focusedSecondsCompleted;
   preAlertFired = snap.preAlertFired;
@@ -635,8 +676,8 @@ watch(
   () => settings.workMinutes,
   () => {
     if (phase.value === "idle" && !isRunning.value) {
-      sessionDurationSeconds = durationSecondsFor("idle");
-      remainingSeconds.value = sessionDurationSeconds;
+      sessionTotalSeconds.value = durationSecondsFor("idle");
+      remainingSeconds.value = sessionTotalSeconds.value;
     }
   },
 );
@@ -679,18 +720,18 @@ const sessionInCycle = computed(() => {
 const canSkip = computed(() => phase.value !== "idle");
 
 const sessionProgress = computed(() => {
-  if (sessionDurationSeconds <= 0) {
+  if (sessionTotalSeconds.value <= 0) {
     return 0;
   }
   return Math.min(
     1,
-    Math.max(0, remainingSeconds.value / sessionDurationSeconds),
+    Math.max(0, remainingSeconds.value / sessionTotalSeconds.value),
   );
 });
 
 const focusSecondsToday = computed(() => {
   if (phase.value === "work") {
-    const elapsed = Math.max(0, sessionDurationSeconds - remainingSeconds.value);
+    const elapsed = Math.max(0, sessionTotalSeconds.value - remainingSeconds.value);
     return focusedSecondsCompleted.value + elapsed;
   }
   return focusedSecondsCompleted.value;
@@ -712,6 +753,20 @@ const nextBreakKind = computed(() => {
   return nextWorkSlot === LONG_BREAK_INTERVAL ? "Long break" : "Short break";
 });
 
+const activeTab = computed((): PomodoroTab => {
+  if (phase.value === "shortBreak") {
+    return "shortBreak";
+  }
+  if (phase.value === "longBreak") {
+    return "longBreak";
+  }
+  return "work";
+});
+
+const canAddFiveMinutes = computed(
+  () => phase.value !== "idle" && (isRunning.value || remainingSeconds.value > 0),
+);
+
 hydrateTimerFromStorage();
 
 export function usePomodoro() {
@@ -721,18 +776,22 @@ export function usePomodoro() {
     phaseLabel,
     isRunning,
     remainingSeconds,
+    sessionTotalSeconds,
     formattedTime,
     completedWorkCount,
     sessionInCycle,
     canSkip,
+    canAddFiveMinutes,
     sessionProgress,
     focusSecondsToday,
     nextBreakKind,
+    activeTab,
     start,
     pause,
     toggle,
     skip,
     addFiveMinutes,
+    selectPhase,
     reset,
   };
 }

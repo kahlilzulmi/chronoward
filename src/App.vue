@@ -1,17 +1,23 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from "vue";
-import { RouterLink, RouterView, useRouter } from "vue-router";
+import { computed, onMounted, onUnmounted, watch } from "vue";
+import { RouterView, useRoute, useRouter } from "vue-router";
+import AppSidebar from "./components/AppSidebar.vue";
+import MobileNav from "./components/MobileNav.vue";
 import BlockerOverlay from "./components/BlockerOverlay.vue";
 import { useIntervention } from "./composables/useIntervention";
 import { useAndroidTrackingPermissions } from "./composables/useAndroidTrackingPermissions";
 import { useTracking } from "./composables/useTracking";
 import { runDriveSync } from "./composables/useDriveSync";
+import "./composables/useTheme";
 
 const { isBlocking } = useIntervention();
 useTracking();
 const router = useRouter();
+const route = useRoute();
 const { isAndroid, isLoaded, needsUsageAccess, fetchStatus } =
   useAndroidTrackingPermissions();
+
+const hideChrome = computed(() => route.name === "onboarding");
 
 let driveTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -47,93 +53,29 @@ watch([isLoaded, needsUsageAccess], () => {
 
 <template>
   <div
-    class="flex min-h-dvh flex-col bg-stone-100 text-stone-900"
+    v-if="hideChrome"
+    class="min-h-dvh bg-stone-100 text-stone-900 dark:bg-slate-950 dark:text-slate-100"
   >
-    <header
-      class="sticky top-0 z-10 border-b border-stone-200/80 bg-stone-100/90 backdrop-blur-sm"
-      style="padding-top: env(safe-area-inset-top)"
-    >
-      <div
-        class="mx-auto flex w-full max-w-lg items-center justify-between px-4 py-3 sm:max-w-2xl sm:px-6 md:max-w-5xl md:py-4 lg:max-w-6xl"
+    <RouterView />
+    <BlockerOverlay v-if="isBlocking" />
+  </div>
+
+  <div
+    v-else
+    class="flex min-h-dvh bg-stone-100 text-stone-900 dark:bg-slate-950 dark:text-slate-100"
+  >
+    <AppSidebar class="hidden lg:flex" />
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <main
+        class="mx-auto w-full flex-1 px-4 pb-24 pt-4 sm:px-6 lg:max-w-6xl lg:px-8 lg:pb-8"
+        style="padding-top: max(1rem, env(safe-area-inset-top))"
       >
-        <p class="text-base font-semibold tracking-tight sm:text-lg">Chronoward</p>
-        <nav class="hidden gap-1 md:flex" aria-label="Primary">
-          <RouterLink
-            v-slot="{ href, navigate, isExactActive }"
-            to="/"
-            custom
-          >
-            <a
-              :href="href"
-              class="rounded-full px-4 py-2 text-sm font-medium transition"
-              :class="
-                isExactActive
-                  ? 'bg-white text-stone-900 shadow-sm'
-                  : 'text-stone-500 hover:bg-white hover:text-stone-900'
-              "
-              @click="navigate"
-            >
-              Dashboard
-            </a>
-          </RouterLink>
-          <RouterLink
-            v-slot="{ href, navigate, isExactActive }"
-            to="/settings"
-            custom
-          >
-            <a
-              :href="href"
-              class="rounded-full px-4 py-2 text-sm font-medium transition"
-              :class="
-                isExactActive
-                  ? 'bg-white text-stone-900 shadow-sm'
-                  : 'text-stone-500 hover:bg-white hover:text-stone-900'
-              "
-              @click="navigate"
-            >
-              Settings
-            </a>
-          </RouterLink>
-        </nav>
-      </div>
-    </header>
+        <RouterView />
+      </main>
+    </div>
 
-    <main class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 sm:max-w-2xl sm:px-6 md:max-w-5xl lg:max-w-6xl">
-      <RouterView />
-    </main>
-
-    <nav
-      class="sticky bottom-0 border-t border-stone-200 bg-white/95 backdrop-blur-sm md:hidden"
-      style="padding-bottom: env(safe-area-inset-bottom)"
-      aria-label="Primary"
-    >
-      <div class="mx-auto grid max-w-lg grid-cols-2 px-2 py-2">
-        <RouterLink v-slot="{ href, navigate, isExactActive }" to="/" custom>
-          <a
-            :href="href"
-            class="block rounded-xl px-3 py-3 text-center text-sm font-medium"
-            :class="isExactActive ? 'bg-stone-100 text-teal-800' : 'text-stone-500'"
-            @click="navigate"
-          >
-            Dashboard
-          </a>
-        </RouterLink>
-        <RouterLink
-          v-slot="{ href, navigate, isExactActive }"
-          to="/settings"
-          custom
-        >
-          <a
-            :href="href"
-            class="block rounded-xl px-3 py-3 text-center text-sm font-medium"
-            :class="isExactActive ? 'bg-stone-100 text-teal-800' : 'text-stone-500'"
-            @click="navigate"
-          >
-            Settings
-          </a>
-        </RouterLink>
-      </div>
-    </nav>
+    <MobileNav class="lg:hidden" />
     <BlockerOverlay v-if="isBlocking" />
   </div>
 </template>
