@@ -515,6 +515,8 @@ function addFiveMinutes() {
 }
 
 function reset() {
+  completedWorkCount.value = 0;
+  focusedSecondsCompleted.value = 0;
   enterPhase("idle", false);
 }
 

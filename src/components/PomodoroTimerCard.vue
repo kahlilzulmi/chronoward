@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import CircularTimer from "./CircularTimer.vue";
 import {
@@ -8,6 +8,7 @@ import {
 } from "../composables/usePomodoro";
 import { useTasks } from "../composables/useTasks";
 import { LONG_BREAK_INTERVAL } from "../composables/useSettings";
+import { btnSecondaryClass, inputClass } from "../ui/themeClasses";
 
 const {
   phase,
@@ -22,12 +23,17 @@ const {
   skip,
   addFiveMinutes,
   selectPhase,
+  reset,
 } = usePomodoro();
 
-const { activeTask, openTasks, setActiveTask, addTask } = useTasks();
+const { activeTask, openTasks, setActiveTask, addTask, renameTask } = useTasks();
 
 const taskPickerOpen = ref(false);
+const taskEditOpen = ref(false);
+const resetConfirmOpen = ref(false);
 const newTaskTitle = ref("");
+const editTaskTitle = ref("");
+const taskPickerRoot = ref<HTMLElement | null>(null);
 
 const tabs: { id: PomodoroTab; label: string }[] = [
   { id: "work", label: "Pomodoro" },
@@ -51,6 +57,11 @@ const primaryActionLabel = computed(() => {
   return "Resume timer";
 });
 
+/** Paused mid-session: show Reset instead of Skip. */
+const showReset = computed(
+  () => phase.value !== "idle" && !isRunning.value,
+);
+
 function onSelectTab(tab: PomodoroTab) {
   selectPhase(tab);
 }
@@ -58,6 +69,7 @@ function onSelectTab(tab: PomodoroTab) {
 function onPickTask(id: string) {
   setActiveTask(id);
   taskPickerOpen.value = false;
+  taskEditOpen.value = false;
 }
 
 function onCreateTask() {
@@ -67,11 +79,60 @@ function onCreateTask() {
     taskPickerOpen.value = false;
   }
 }
+
+function openTaskEdit() {
+  if (!activeTask.value) {
+    taskPickerOpen.value = true;
+    return;
+  }
+  editTaskTitle.value = activeTask.value.title;
+  taskEditOpen.value = true;
+  taskPickerOpen.value = false;
+}
+
+function saveTaskEdit() {
+  if (!activeTask.value) {
+    return;
+  }
+  renameTask(activeTask.value.id, editTaskTitle.value);
+  taskEditOpen.value = false;
+}
+
+function openResetConfirm() {
+  resetConfirmOpen.value = true;
+}
+
+function cancelReset() {
+  resetConfirmOpen.value = false;
+}
+
+function confirmReset() {
+  reset();
+  resetConfirmOpen.value = false;
+}
+
+function onDocumentPointerDown(event: PointerEvent) {
+  if (!taskPickerOpen.value) {
+    return;
+  }
+  const root = taskPickerRoot.value;
+  if (root && event.target instanceof Node && !root.contains(event.target)) {
+    taskPickerOpen.value = false;
+  }
+}
+
+onMounted(() => {
+  document.addEventListener("pointerdown", onDocumentPointerDown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("pointerdown", onDocumentPointerDown);
+});
 </script>
 
 <template>
   <article
-    class="flex flex-col gap-6 rounded-2xl border border-stone-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900/80 lg:p-8"
+    class="flex flex-col gap-5 rounded-2xl border border-stone-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80 sm:gap-6 sm:p-6 lg:p-8"
   >
     <div class="flex gap-6 border-b border-stone-200 pb-1 dark:border-slate-800">
       <button
@@ -111,23 +172,52 @@ function onCreateTask() {
       </p>
     </div>
 
-    <div class="relative">
-      <button
-        type="button"
-        class="flex w-full items-center justify-between gap-3 rounded-full border border-stone-300 bg-stone-50 px-4 py-3 text-left text-sm text-stone-800 transition hover:border-stone-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-200 dark:hover:border-slate-600"
-        @click="taskPickerOpen = !taskPickerOpen"
-      >
-        <span class="flex min-w-0 items-center gap-2">
-          <svg class="h-4 w-4 shrink-0 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-            <rect x="4" y="5" width="16" height="15" rx="2" />
-            <path d="M8 3v4M16 3v4" stroke-linecap="round" />
+    <div ref="taskPickerRoot" class="relative">
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-full border border-stone-300 bg-stone-50 px-4 py-3 text-left text-sm text-stone-800 transition hover:border-stone-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-200 dark:hover:border-slate-600"
+          @click="taskPickerOpen = !taskPickerOpen"
+        >
+          <span class="flex min-w-0 items-center gap-2">
+            <svg class="h-4 w-4 shrink-0 text-stone-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <path d="M8 12l2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span class="truncate">{{ taskLabel }}</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-500 transition hover:border-teal-500/50 hover:text-teal-600 dark:border-slate-700 dark:text-slate-400 dark:hover:text-teal-400"
+          title="Edit active task"
+          @click="openTaskEdit"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path d="M4 20h4l9.5-9.5a2.1 2.1 0 0 0-3-3L5 17v3z" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          <span class="truncate">{{ taskLabel }}</span>
-        </span>
-        <svg class="h-4 w-4 shrink-0 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-          <path d="M4 20h4l9.5-9.5a2.1 2.1 0 0 0-3-3L5 17v3z" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </button>
+        </button>
+      </div>
+
+      <div
+        v-if="taskEditOpen && activeTask"
+        class="mt-2 flex gap-2"
+      >
+        <input
+          v-model="editTaskTitle"
+          type="text"
+          maxlength="120"
+          :class="inputClass"
+          @keydown.enter.prevent="saveTaskEdit"
+        />
+        <button
+          type="button"
+          class="rounded-xl bg-teal-500/15 px-3 py-2 text-sm font-semibold text-teal-600 dark:text-teal-400"
+          @click="saveTaskEdit"
+        >
+          Save
+        </button>
+      </div>
 
       <div
         v-if="taskPickerOpen"
@@ -148,7 +238,7 @@ function onCreateTask() {
             <RouterLink to="/tasks" class="text-teal-400 hover:underline">Add one</RouterLink>
           </p>
         </div>
-        <div class="flex gap-2 border-t border-slate-800 p-2">
+        <div class="flex gap-2 border-t border-stone-200 p-2 dark:border-slate-800">
           <input
             v-model="newTaskTitle"
             type="text"
@@ -167,7 +257,7 @@ function onCreateTask() {
       </div>
     </div>
 
-    <div class="flex items-center justify-center gap-4">
+    <div class="flex items-center justify-center gap-3 sm:gap-4">
       <button
         type="button"
         class="flex h-12 w-12 items-center justify-center rounded-full border border-stone-300 text-sm font-semibold text-stone-600 transition hover:border-teal-500/50 hover:text-teal-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:border-teal-500/50 dark:hover:text-teal-400"
@@ -206,6 +296,20 @@ function onCreateTask() {
       </button>
 
       <button
+        v-if="showReset"
+        type="button"
+        class="flex h-12 w-12 items-center justify-center rounded-full border border-stone-300 text-stone-600 transition hover:border-rose-500/50 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-rose-500/50 dark:hover:text-rose-400"
+        title="Reset timer"
+        @click="openResetConfirm"
+      >
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M4 4v6h6" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M20 20v-6h-6" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M20.49 9A9 9 0 0 0 6.7 5.3L4 8M3.51 15A9 9 0 0 0 17.3 18.7L20 16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <button
+        v-else
         type="button"
         class="flex h-12 w-12 items-center justify-center rounded-full border border-stone-300 text-stone-600 transition hover:border-teal-500/50 hover:text-teal-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:border-teal-500/50 dark:hover:text-teal-400"
         :disabled="!canSkip"
@@ -218,5 +322,44 @@ function onCreateTask() {
         </svg>
       </button>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="resetConfirmOpen"
+        class="fixed inset-0 z-[180] flex items-center justify-center bg-stone-950/70 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reset-timer-title"
+        @click.self="cancelReset"
+      >
+        <div
+          class="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+        >
+          <h2
+            id="reset-timer-title"
+            class="text-lg font-semibold text-stone-900 dark:text-slate-100"
+          >
+            Reset timer and session?
+          </h2>
+          <p class="mt-2 text-sm text-stone-600 dark:text-slate-400">
+            This clears the current phase, returns to idle, and resets session progress
+            (Session 1 / {{ LONG_BREAK_INTERVAL }}). Focus progress in this cycle will be lost and
+            cannot be undone.
+          </p>
+          <div class="mt-6 flex flex-wrap justify-end gap-2">
+            <button type="button" :class="btnSecondaryClass" @click="cancelReset">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="min-h-11 rounded-xl border border-rose-700 bg-rose-700 px-4 text-sm font-semibold text-white transition hover:bg-rose-600 dark:border-rose-500 dark:bg-rose-600 dark:hover:bg-rose-500"
+              @click="confirmReset"
+            >
+              Reset timer &amp; session
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </article>
 </template>
