@@ -11,6 +11,14 @@ import {
   parsePairingQr,
   usePairingClient,
 } from "../composables/usePairingClient";
+import {
+  bodyClass,
+  btnPrimaryClass,
+  hintClass,
+  inputClass,
+  insetPanelClass,
+  labelClass,
+} from "../ui/themeClasses";
 
 const { isConnected, isConnecting, statusMessage, connectWithPin } =
   usePairingClient();
@@ -85,20 +93,17 @@ async function scanQrAndConnect() {
 
 <template>
   <div class="space-y-3">
-    <p class="text-sm text-stone-500">
+    <p :class="bodyClass">
       Scan the desktop QR, or enter the IP, port, and 6-digit PIN. Same Wi-Fi —
       pairing does not use
       <span class="font-mono text-xs">adb reverse</span>.
     </p>
 
-    <div
-      v-if="isConnected"
-      class="rounded-xl border border-teal-200 bg-teal-50 px-4 py-4 text-center"
-    >
-      <p class="text-sm font-semibold uppercase tracking-[0.2em] text-teal-800">
+    <div v-if="isConnected" class="px-4 py-4 text-center" :class="insetPanelClass">
+      <p class="text-sm font-semibold uppercase tracking-[0.2em] text-teal-800 dark:text-teal-400">
         Connected
       </p>
-      <p class="mt-2 font-mono text-xs text-teal-800/80">
+      <p class="mt-2 font-mono text-xs text-teal-800/80 dark:text-teal-400/80">
         {{ ip.trim() }}:{{ port }}
       </p>
     </div>
@@ -109,8 +114,8 @@ async function scanQrAndConnect() {
       class="min-h-11 w-full rounded-xl border px-4 text-sm font-semibold"
       :class="
         isScanning || isConnecting
-          ? 'border-stone-200 bg-stone-100 text-stone-400'
-          : 'border-teal-800 bg-teal-800 text-white'
+          ? 'border-stone-200 bg-stone-100 text-stone-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600'
+          : btnPrimaryClass
       "
       :disabled="isScanning || isConnecting"
       @click="scanQrAndConnect"
@@ -119,38 +124,37 @@ async function scanQrAndConnect() {
     </button>
 
     <label class="block space-y-1.5">
-      <span class="text-sm font-medium text-stone-700">Desktop IP</span>
+      <span :class="labelClass">Desktop IP</span>
       <input
         v-model="ip"
         type="text"
         inputmode="decimal"
         autocomplete="off"
         placeholder="192.168.x.x"
-        class="min-h-12 w-full rounded-xl border border-stone-300 bg-stone-50 px-4 text-base text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+        :class="inputClass"
       />
-      <span class="text-xs text-stone-500">
+      <span :class="hintClass">
         Filled from the QR, or copy the IP from the desktop pairing screen.
       </span>
     </label>
 
     <label class="block space-y-1.5">
-      <span class="text-sm font-medium text-stone-700">Port</span>
+      <span :class="labelClass">Port</span>
       <input
         v-model.number="port"
         type="number"
         inputmode="numeric"
         min="1"
         max="65535"
-        class="min-h-12 w-full rounded-xl border border-stone-300 bg-stone-50 px-4 font-mono text-base text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+        :class="inputClass"
       />
-      <span class="text-xs text-stone-500">
-        Default {{ DEFAULT_PAIRING_PORT }}. Vite HMR stays on 1421; pairing uses
-        this port.
+      <span :class="hintClass">
+        Default {{ DEFAULT_PAIRING_PORT }}. Vite HMR stays on 1421; pairing uses this port.
       </span>
     </label>
 
     <label class="block space-y-1.5">
-      <span class="text-sm font-medium text-stone-700">PIN</span>
+      <span :class="labelClass">PIN</span>
       <input
         v-model="pin"
         type="text"
@@ -158,7 +162,7 @@ async function scanQrAndConnect() {
         maxlength="6"
         autocomplete="one-time-code"
         placeholder="000000"
-        class="min-h-12 w-full rounded-xl border border-stone-300 bg-stone-50 px-4 font-mono text-2xl tracking-[0.35em] text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+        :class="[inputClass, 'font-mono text-2xl tracking-[0.35em]']"
       />
     </label>
 
@@ -167,19 +171,14 @@ async function scanQrAndConnect() {
       class="min-h-11 w-full rounded-xl border px-4 text-sm font-semibold"
       :class="
         isConnecting
-          ? 'border-stone-200 bg-stone-100 text-stone-400'
-          : 'border-teal-800 bg-teal-800 text-white'
+          ? 'border-stone-200 bg-stone-100 text-stone-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600'
+          : btnPrimaryClass
       "
       :disabled="isConnecting || isScanning"
       @click="connect"
     >
       {{ isConnecting ? "Connecting…" : isConnected ? "Reconnect" : "Connect" }}
     </button>
-    <p
-      v-if="statusMessage && !isConnected"
-      class="text-xs text-stone-500"
-    >
-      {{ statusMessage }}
-    </p>
+    <p v-if="statusMessage && !isConnected" :class="hintClass">{{ statusMessage }}</p>
   </div>
 </template>

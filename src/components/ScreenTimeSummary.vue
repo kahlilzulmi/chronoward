@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { getAggregatedUsage, type AggregatedUsageRow } from "../services/analytics";
+import { dashboardCardClass, linkClass } from "../ui/themeClasses";
 
 const rows = ref<AggregatedUsageRow[]>([]);
 const loading = ref(true);
@@ -41,26 +42,26 @@ const hasData = computed(() => rows.value.length > 0);
 </script>
 
 <template>
-  <article class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+  <article :class="dashboardCardClass">
     <div class="mb-4 flex items-center justify-between gap-3">
       <div class="flex items-center gap-2">
-        <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+        <svg class="h-4 w-4 text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
           <circle cx="12" cy="12" r="8.5" />
           <path d="M12 7v5l3 2" stroke-linecap="round" />
         </svg>
-        <h2 class="text-sm font-semibold text-slate-100">Screen Time</h2>
+        <h2 class="text-sm font-semibold text-stone-900 dark:text-slate-100">Screen Time</h2>
       </div>
-      <span class="rounded-full bg-slate-800 px-2.5 py-0.5 text-[11px] font-medium text-slate-400">
+      <span class="rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-medium text-stone-500 dark:bg-slate-800 dark:text-slate-400">
         Today
       </span>
     </div>
 
-    <p v-if="loading" class="py-6 text-center text-sm text-slate-500">Loading…</p>
-    <p v-else-if="!hasData" class="py-6 text-center text-sm text-slate-500">
+    <p v-if="loading" class="py-6 text-center text-sm text-stone-500 dark:text-slate-500">Loading…</p>
+    <p v-else-if="!hasData" class="py-6 text-center text-sm text-stone-500 dark:text-slate-500">
       No usage recorded yet today.
     </p>
     <template v-else>
-      <p class="text-2xl font-semibold tracking-tight text-slate-100">
+      <p class="text-2xl font-semibold tracking-tight text-stone-900 dark:text-slate-100">
         {{ formatDuration(totalSeconds) }}
       </p>
       <ul class="mt-4 space-y-2">
@@ -69,22 +70,19 @@ const hasData = computed(() => rows.value.length > 0);
           :key="row.appName"
           class="flex items-center justify-between gap-3 text-sm"
         >
-          <span class="flex min-w-0 items-center gap-2 text-slate-300">
+          <span class="flex min-w-0 items-center gap-2 text-stone-700 dark:text-slate-300">
             <span
               class="h-2 w-2 shrink-0 rounded-full"
               :style="{ backgroundColor: sliceColors[index] ?? '#64748b' }"
             />
             <span class="truncate">{{ row.appName }}</span>
           </span>
-          <span class="shrink-0 text-slate-500">{{ formatDuration(row.totalSeconds) }}</span>
+          <span class="shrink-0 text-stone-500 dark:text-slate-500">{{ formatDuration(row.totalSeconds) }}</span>
         </li>
       </ul>
     </template>
 
-    <RouterLink
-      to="/insights"
-      class="mt-4 inline-flex text-sm font-medium text-teal-400 hover:text-teal-300"
-    >
+    <RouterLink to="/insights" :class="[linkClass, 'mt-4 inline-flex']">
       View full insights →
     </RouterLink>
   </article>

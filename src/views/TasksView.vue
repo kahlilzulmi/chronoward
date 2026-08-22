@@ -18,8 +18,8 @@ function onAdd() {
 <template>
   <section class="mx-auto w-full max-w-2xl space-y-6 py-6 lg:py-8">
     <header class="space-y-1">
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-100">Tasks</h1>
-      <p class="text-sm text-slate-400">
+      <h1 class="text-2xl font-semibold tracking-tight text-stone-900 dark:text-slate-100">Tasks</h1>
+      <p class="text-sm text-stone-500 dark:text-slate-400">
         {{ openTasks.length }} open · pick an active task on the dashboard timer
       </p>
     </header>
@@ -44,7 +44,7 @@ function onAdd() {
       <li
         v-for="task in tasks"
         :key="task.id"
-        class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3"
+        class="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900/60"
         :class="task.completed ? 'opacity-60' : ''"
       >
         <input
@@ -55,7 +55,7 @@ function onAdd() {
         />
         <span
           class="min-w-0 flex-1 truncate text-sm"
-          :class="task.completed ? 'text-slate-500 line-through' : 'text-slate-100'"
+          :class="task.completed ? 'text-stone-500 line-through dark:text-slate-500' : 'text-stone-900 dark:text-slate-100'"
         >
           {{ task.title }}
         </span>
@@ -63,7 +63,7 @@ function onAdd() {
           v-if="!task.completed"
           type="button"
           class="text-xs font-medium"
-          :class="activeTaskId === task.id ? 'text-teal-400' : 'text-slate-500 hover:text-teal-400'"
+          :class="activeTaskId === task.id ? 'text-teal-700 dark:text-teal-400' : 'text-stone-500 hover:text-teal-700 dark:text-slate-500 dark:hover:text-teal-400'"
           @click="setActiveTask(task.id)"
         >
           {{ activeTaskId === task.id ? "Active" : "Set active" }}
@@ -80,9 +80,9 @@ function onAdd() {
 
     <article
       v-else
-      class="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 p-10 text-center"
+      class="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-10 text-center dark:border-slate-700 dark:bg-slate-900/40"
     >
-      <p class="text-sm text-slate-400">No tasks yet. Add one above.</p>
+      <p class="text-sm text-stone-500 dark:text-slate-400">No tasks yet. Add one above.</p>
     </article>
   </section>
 </template>

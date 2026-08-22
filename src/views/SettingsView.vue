@@ -11,12 +11,32 @@ import { usePairingHost } from "../composables/usePairingHost";
 import { useGoogleAuth } from "../composables/useGoogleAuth";
 import { useDriveSync } from "../composables/useDriveSync";
 import PairingClient from "../components/PairingClient.vue";
+import AppCard from "../components/AppCard.vue";
 import {
   clampMinutes,
   DEFAULT_SETTINGS,
   parseListInput,
   settings,
 } from "../composables/useSettings";
+import {
+  bodyClass,
+  btnPrimaryClass,
+  btnSecondaryClass,
+  dividerClass,
+  headingClass,
+  hintClass,
+  inputClass,
+  insetPanelClass,
+  labelClass,
+  linkClass,
+  modeBtnActiveClass,
+  modeBtnIdleClass,
+  pageSubtitleClass,
+  pageTitleClass,
+  textareaClass,
+  toggleOffClass,
+  toggleOnClass,
+} from "../ui/themeClasses";
 
 const { phase, isRunning } = usePomodoro();
 const {
@@ -125,24 +145,22 @@ onMounted(() => {
 <template>
   <section class="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 py-6 sm:gap-8 sm:py-10">
     <header class="space-y-1">
-      <h1 class="text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
-        Settings
-      </h1>
-      <p class="text-sm text-stone-500 sm:text-base">{{ liveSessionHint }}</p>
+      <h1 :class="pageTitleClass">Settings</h1>
+      <p :class="pageSubtitleClass">{{ liveSessionHint }}</p>
     </header>
 
-    <section class="space-y-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
+    <AppCard>
       <div>
-        <h2 class="text-sm font-medium text-stone-800 sm:text-base">Devices</h2>
-        <p class="mt-1 text-sm text-stone-500">
+        <h2 :class="headingClass">Devices</h2>
+        <p class="mt-1" :class="bodyClass">
           This install plus a desktop LAN host PIN for a mobile app on the same Wi-Fi.
         </p>
       </div>
 
-      <div class="flex items-start justify-between gap-3 rounded-xl border border-stone-100 bg-stone-50 px-4 py-3">
+      <div class="flex items-start justify-between gap-3" :class="insetPanelClass">
         <div class="min-w-0">
-          <p class="text-sm font-semibold text-stone-900">{{ thisDevice.name }}</p>
-          <p class="mt-0.5 font-mono text-xs text-stone-500">{{ thisDevice.platform }}</p>
+          <p class="text-sm font-semibold text-stone-900 dark:text-slate-100">{{ thisDevice.name }}</p>
+          <p class="mt-0.5 font-mono text-xs text-stone-500 dark:text-slate-500">{{ thisDevice.platform }}</p>
         </div>
         <span
           class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider"
@@ -153,26 +171,20 @@ onMounted(() => {
         </span>
       </div>
 
-      <div class="space-y-2 border-t border-stone-100 pt-4">
-        <p class="text-sm font-medium text-stone-800">Notifications</p>
-        <p class="text-sm text-stone-500">
+      <div class="space-y-2" :class="dividerClass">
+        <p :class="headingClass">Notifications</p>
+        <p :class="bodyClass">
           Work start, break start, and the 1-minute pre-alert use system notifications on desktop and Android.
           On Android 13+, allow the notification prompt before sending a test.
         </p>
-        <button
-          type="button"
-          class="min-h-11 rounded-xl border border-stone-300 bg-stone-50 px-4 text-sm font-semibold text-stone-700"
-          @click="sendTestNotification"
-        >
+        <button type="button" :class="btnSecondaryClass" @click="sendTestNotification">
           Send test notification
         </button>
-        <p v-if="notificationTestHint" class="text-xs text-stone-500">{{ notificationTestHint }}</p>
-        <div class="flex items-center justify-between gap-4 border-t border-stone-100 pt-4">
+        <p v-if="notificationTestHint" :class="hintClass">{{ notificationTestHint }}</p>
+        <div class="flex items-center justify-between gap-4" :class="dividerClass">
           <div>
-            <p class="text-sm font-medium text-stone-800 sm:text-base">
-              Show ongoing timer notification with quick actions
-            </p>
-            <p class="text-sm text-stone-500">
+            <p :class="headingClass">Show ongoing timer notification with quick actions</p>
+            <p :class="bodyClass">
               Persistent shade / toast with Pause, Skip, +5 min, and Stop while a session is active.
             </p>
           </div>
@@ -180,7 +192,7 @@ onMounted(() => {
             type="button"
             role="switch"
             class="relative h-7 w-12 shrink-0 rounded-full transition"
-            :class="settings.showOngoingTimerNotification ? 'bg-teal-800' : 'bg-stone-300'"
+            :class="settings.showOngoingTimerNotification ? toggleOnClass : toggleOffClass"
             :aria-checked="settings.showOngoingTimerNotification"
             @click="
               settings.showOngoingTimerNotification = !settings.showOngoingTimerNotification
@@ -194,12 +206,10 @@ onMounted(() => {
             />
           </button>
         </div>
-        <div class="flex items-center justify-between gap-4 border-t border-stone-100 pt-4">
+        <div class="flex items-center justify-between gap-4" :class="dividerClass">
           <div>
-            <p class="text-sm font-medium text-stone-800 sm:text-base">
-              Save browser URLs in the local log
-            </p>
-            <p class="text-sm text-stone-500">
+            <p :class="headingClass">Save browser URLs in the local log</p>
+            <p :class="bodyClass">
               Off by default. App names still log. URLs will not go to Drive when sync ships.
             </p>
           </div>
@@ -207,7 +217,7 @@ onMounted(() => {
             type="button"
             role="switch"
             class="relative h-7 w-12 shrink-0 rounded-full transition"
-            :class="settings.persistUrls ? 'bg-teal-800' : 'bg-stone-300'"
+            :class="settings.persistUrls ? toggleOnClass : toggleOffClass"
             :aria-checked="settings.persistUrls"
             @click="settings.persistUrls = !settings.persistUrls"
           >
@@ -219,56 +229,46 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="border-t border-stone-100 pt-4">
-        <RouterLink
-          to="/help"
-          class="text-sm font-medium text-teal-800 hover:underline"
-        >
-          Help &amp; Troubleshooting →
-        </RouterLink>
+      <div :class="dividerClass">
+        <RouterLink to="/help" :class="linkClass">Help &amp; Troubleshooting →</RouterLink>
       </div>
 
-      <div class="space-y-3 border-t border-stone-100 pt-4">
+      <div class="space-y-3" :class="dividerClass">
         <div>
-          <p class="text-sm font-medium text-stone-800">Google account</p>
-          <p class="mt-1 text-sm text-stone-500">
+          <p :class="headingClass">Google account</p>
+          <p class="mt-1" :class="bodyClass">
             Same Google account on this PC and your phone is how All Devices merges via Drive
             app data. URLs are not uploaded. Sign in again on this PC to grant Drive if Sync now
             asks for consent.
           </p>
         </div>
-        <p v-if="googleStatus?.signedIn" class="text-sm text-teal-800">
+        <p v-if="googleStatus?.signedIn" class="text-sm text-teal-800 dark:text-teal-400">
           Signed in{{ googleStatus.email ? ` as ${googleStatus.email}` : "" }}.
         </p>
-        <p v-else class="text-sm text-stone-500">Not signed in.</p>
-        <p class="text-xs text-stone-500">{{ googleStatus?.nextStep }}</p>
-        <p v-if="googleError" class="text-sm text-amber-800">{{ googleError }}</p>
-        <p v-else-if="googleCancelled" class="text-sm text-stone-500">Sign-in cancelled.</p>
-        <p v-else-if="googleBusy" class="text-sm text-stone-500">Waiting for Google…</p>
-        <p v-if="googleStatus?.lastSyncAt" class="text-xs text-stone-500">
+        <p v-else :class="bodyClass">Not signed in.</p>
+        <p :class="hintClass">{{ googleStatus?.nextStep }}</p>
+        <p v-if="googleError" class="text-sm text-amber-800 dark:text-amber-300">{{ googleError }}</p>
+        <p v-else-if="googleCancelled" :class="bodyClass">Sign-in cancelled.</p>
+        <p v-else-if="googleBusy" :class="bodyClass">Waiting for Google…</p>
+        <p v-if="googleStatus?.lastSyncAt" :class="hintClass">
           Last sync: {{ formatSyncAt(googleStatus.lastSyncAt) }}
         </p>
-        <p v-if="driveSyncError" class="text-sm text-amber-800">{{ driveSyncError }}</p>
+        <p v-if="driveSyncError" class="text-sm text-amber-800 dark:text-amber-300">{{ driveSyncError }}</p>
         <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="min-h-11 rounded-xl border border-stone-300 bg-stone-50 px-4 text-sm font-semibold text-stone-700"
-            :disabled="googleBusy"
-            @click="signIn"
-          >
+          <button type="button" :class="btnSecondaryClass" :disabled="googleBusy" @click="signIn">
             Sign in with Google
           </button>
           <button
             v-if="googleBusy"
             type="button"
-            class="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700"
+            :class="btnSecondaryClass"
             @click="cancelSignIn"
           >
             Cancel
           </button>
           <button
             type="button"
-            class="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700"
+            :class="btnSecondaryClass"
             :disabled="googleBusy || driveSyncing || !googleStatus?.signedIn"
             @click="signOut"
           >
@@ -276,7 +276,7 @@ onMounted(() => {
           </button>
           <button
             type="button"
-            class="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700"
+            :class="btnSecondaryClass"
             :disabled="googleBusy || driveSyncing || !googleStatus?.signedIn"
             @click="onSyncNow"
           >
@@ -285,55 +285,53 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="space-y-3 border-t border-stone-100 pt-4">
+      <div class="space-y-3" :class="dividerClass">
         <div>
-          <p class="text-sm font-medium text-stone-800">Pair another device</p>
-          <p class="mt-1 text-sm text-stone-500">
+          <p :class="headingClass">Pair another device</p>
+          <p class="mt-1" :class="bodyClass">
             Same-Wi-Fi fallback. Drive is the bind once both devices are signed in. The pairing
             port is closed until you start pairing. PIN lasts 10 minutes and locks after 8 failures.
           </p>
         </div>
 
         <template v-if="!isAndroid">
-          <div
-            v-if="pairingHost"
-            class="rounded-xl border border-stone-100 bg-stone-50 px-4 py-4 text-center"
-          >
+          <div v-if="pairingHost" class="px-4 py-4 text-center" :class="insetPanelClass">
             <div class="flex justify-center">
               <QrcodeVue
                 :value="pairingQrValue"
                 :size="192"
                 level="M"
                 render-as="svg"
-                background="#fafaf9"
-                foreground="#1c1917"
+                background="#020617"
+                foreground="#f8fafc"
               />
             </div>
-            <p class="mt-3 font-mono text-3xl font-semibold tracking-[0.35em] text-stone-900">
+            <p class="mt-3 font-mono text-3xl font-semibold tracking-[0.35em] text-stone-900 dark:text-slate-100">
               {{ pairingHost.pin }}
             </p>
-            <p class="mt-2 text-sm text-stone-500">
+            <p class="mt-2" :class="bodyClass">
               Scan the QR from the Android app. PIN is the fallback if the camera is unavailable.
             </p>
-            <p class="mt-2 font-mono text-xs text-stone-500">
+            <p class="mt-2 font-mono text-xs text-stone-500 dark:text-slate-500">
               {{ pairingHost.ip }}:{{ pairingHost.port }}
             </p>
-            <p v-if="pairingHost.expiresInSeconds" class="mt-1 text-xs text-stone-400">
+            <p v-if="pairingHost.expiresInSeconds" :class="hintClass">
               PIN expires in {{ pairingHost.expiresInSeconds }}s
             </p>
             <p
               v-if="isPaired"
-              class="mt-3 text-sm font-semibold uppercase tracking-[0.2em] text-teal-800"
+              class="mt-3 text-sm font-semibold uppercase tracking-[0.2em] text-teal-800 dark:text-teal-400"
             >
               Connected
             </p>
           </div>
-          <p v-else-if="pairingError" class="text-sm text-amber-800">{{ pairingError }}</p>
-          <p v-else class="text-sm text-stone-500">Pairing is off. Start it only when the phone is nearby.</p>
+          <p v-else-if="pairingError" class="text-sm text-amber-800 dark:text-amber-300">{{ pairingError }}</p>
+          <p v-else :class="bodyClass">Pairing is off. Start it only when the phone is nearby.</p>
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class="min-h-11 flex-1 rounded-xl border border-stone-300 bg-stone-50 px-4 text-sm font-semibold text-stone-700"
+              class="min-h-11 flex-1"
+              :class="btnSecondaryClass"
               :disabled="pairingBusy"
               @click="startPairingMode"
             >
@@ -342,7 +340,7 @@ onMounted(() => {
             <button
               v-if="pairingHost"
               type="button"
-              class="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700"
+              :class="btnSecondaryClass"
               :disabled="pairingBusy"
               @click="stopPairingMode"
             >
@@ -352,78 +350,74 @@ onMounted(() => {
         </template>
         <PairingClient v-else />
       </div>
-    </section>
+    </AppCard>
 
     <div
       v-if="isAndroid && isLoaded && needsUsageAccess"
-      class="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-6"
+      class="space-y-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10 sm:p-6"
     >
-      <p class="text-sm font-semibold text-amber-900">
+      <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">
         Usage Access is required to track the foreground app
       </p>
       <div class="flex flex-wrap gap-2">
-        <button
-          type="button"
-          class="min-h-11 rounded-xl border border-amber-700 bg-amber-700 px-4 text-sm font-semibold text-white"
-          @click="requestPermissions(false)"
-        >
+        <button type="button" :class="btnPrimaryClass" @click="requestPermissions(false)">
           Grant Usage Access
         </button>
       </div>
     </div>
 
-    <div class="space-y-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
+    <AppCard>
       <label class="block space-y-2">
-        <span class="text-sm font-medium text-stone-700">Work duration (minutes)</span>
+        <span :class="labelClass">Work duration (minutes)</span>
         <input
           v-model.number="settings.workMinutes"
           type="number"
           inputmode="numeric"
           min="1"
           max="180"
-          class="min-h-12 w-full rounded-xl border border-stone-300 bg-stone-50 px-4 text-base text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+          :class="inputClass"
           @blur="commitMinutes('workMinutes')"
         />
       </label>
 
       <label class="block space-y-2">
-        <span class="text-sm font-medium text-stone-700">Short break (minutes)</span>
+        <span :class="labelClass">Short break (minutes)</span>
         <input
           v-model.number="settings.shortBreakMinutes"
           type="number"
           inputmode="numeric"
           min="1"
           max="180"
-          class="min-h-12 w-full rounded-xl border border-stone-300 bg-stone-50 px-4 text-base text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+          :class="inputClass"
           @blur="commitMinutes('shortBreakMinutes')"
         />
       </label>
 
       <label class="block space-y-2">
-        <span class="text-sm font-medium text-stone-700">Long break (minutes)</span>
+        <span :class="labelClass">Long break (minutes)</span>
         <input
           v-model.number="settings.longBreakMinutes"
           type="number"
           inputmode="numeric"
           min="1"
           max="180"
-          class="min-h-12 w-full rounded-xl border border-stone-300 bg-stone-50 px-4 text-base text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+          :class="inputClass"
           @blur="commitMinutes('longBreakMinutes')"
         />
       </label>
-    </div>
+    </AppCard>
 
-    <div class="space-y-1 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
+    <AppCard class="space-y-1">
       <div class="flex items-center justify-between gap-4 py-2">
         <div>
-          <p class="text-sm font-medium text-stone-800 sm:text-base">Auto-start work</p>
-          <p class="text-sm text-stone-500">Start the next work session when a break ends.</p>
+          <p :class="headingClass">Auto-start work</p>
+          <p :class="bodyClass">Start the next work session when a break ends.</p>
         </div>
         <button
           type="button"
           role="switch"
           class="relative h-7 w-12 shrink-0 rounded-full transition"
-          :class="settings.autoStartWork ? 'bg-teal-800' : 'bg-stone-300'"
+          :class="settings.autoStartWork ? toggleOnClass : toggleOffClass"
           :aria-checked="settings.autoStartWork"
           @click="settings.autoStartWork = !settings.autoStartWork"
         >
@@ -434,16 +428,16 @@ onMounted(() => {
         </button>
       </div>
 
-      <div class="flex items-center justify-between gap-4 border-t border-stone-100 py-2 pt-4">
+      <div class="flex items-center justify-between gap-4 py-2 pt-4" :class="dividerClass">
         <div>
-          <p class="text-sm font-medium text-stone-800 sm:text-base">Auto-start breaks</p>
-          <p class="text-sm text-stone-500">Start the next break when a work session ends.</p>
+          <p :class="headingClass">Auto-start breaks</p>
+          <p :class="bodyClass">Start the next break when a work session ends.</p>
         </div>
         <button
           type="button"
           role="switch"
           class="relative h-7 w-12 shrink-0 rounded-full transition"
-          :class="settings.autoStartBreaks ? 'bg-teal-800' : 'bg-stone-300'"
+          :class="settings.autoStartBreaks ? toggleOnClass : toggleOffClass"
           :aria-checked="settings.autoStartBreaks"
           @click="settings.autoStartBreaks = !settings.autoStartBreaks"
         >
@@ -453,12 +447,12 @@ onMounted(() => {
           />
         </button>
       </div>
-    </div>
+    </AppCard>
 
-    <div class="space-y-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
+    <AppCard>
       <div>
-        <p class="text-sm font-medium text-stone-800 sm:text-base">Intervention mode</p>
-        <p class="text-sm text-stone-500">
+        <p :class="headingClass">Intervention mode</p>
+        <p :class="bodyClass">
           Warning sends a system notification. Block pauses work and takes over the screen.
         </p>
       </div>
@@ -466,11 +460,7 @@ onMounted(() => {
         <button
           type="button"
           class="min-h-11 rounded-xl border px-4 text-sm font-semibold"
-          :class="
-            settings.interventionMode === 'warning'
-              ? 'border-teal-800 bg-teal-800 text-white'
-              : 'border-stone-300 bg-stone-50 text-stone-700'
-          "
+          :class="settings.interventionMode === 'warning' ? modeBtnActiveClass : modeBtnIdleClass"
           @click="settings.interventionMode = 'warning'"
         >
           Warning
@@ -478,11 +468,7 @@ onMounted(() => {
         <button
           type="button"
           class="min-h-11 rounded-xl border px-4 text-sm font-semibold"
-          :class="
-            settings.interventionMode === 'block'
-              ? 'border-teal-800 bg-teal-800 text-white'
-              : 'border-stone-300 bg-stone-50 text-stone-700'
-          "
+          :class="settings.interventionMode === 'block' ? modeBtnActiveClass : modeBtnIdleClass"
           @click="settings.interventionMode = 'block'"
         >
           Block
@@ -490,28 +476,18 @@ onMounted(() => {
       </div>
 
       <label class="block space-y-2">
-        <span class="text-sm font-medium text-stone-700">Blocklist</span>
-        <textarea
-          v-model="blocklistText"
-          rows="4"
-          class="w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 font-mono text-sm text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
-          @blur="commitBlocklist"
-        />
-        <span class="text-xs text-stone-500">One domain or app fragment per line.</span>
+        <span :class="labelClass">Blocklist</span>
+        <textarea v-model="blocklistText" rows="4" :class="textareaClass" @blur="commitBlocklist" />
+        <span :class="hintClass">One domain or app fragment per line.</span>
       </label>
 
       <label class="block space-y-2">
-        <span class="text-sm font-medium text-stone-700">Ignored apps</span>
-        <textarea
-          v-model="ignoredAppsText"
-          rows="3"
-          class="w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 font-mono text-sm text-stone-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
-          @blur="commitIgnoredApps"
-        />
-        <span class="text-xs text-stone-500">
+        <span :class="labelClass">Ignored apps</span>
+        <textarea v-model="ignoredAppsText" rows="3" :class="textareaClass" @blur="commitIgnoredApps" />
+        <span :class="hintClass">
           If the active app name contains any of these, skip intervention (IDEs).
         </span>
       </label>
-    </div>
+    </AppCard>
   </section>
 </template>

@@ -24,8 +24,8 @@ const totalFocusSeconds = computed(() =>
 <template>
   <section class="mx-auto w-full max-w-2xl space-y-6 py-6 lg:py-8">
     <header class="space-y-1">
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-100">Sessions</h1>
-      <p class="text-sm text-slate-400">
+      <h1 class="text-2xl font-semibold tracking-tight text-stone-900 dark:text-slate-100">Sessions</h1>
+      <p class="text-sm text-stone-500 dark:text-slate-400">
         {{ sessions.length }} completed today ·
         {{ formatDuration(totalFocusSeconds) }} focus time
       </p>
@@ -33,29 +33,29 @@ const totalFocusSeconds = computed(() =>
 
     <article
       v-if="sessions.length === 0"
-      class="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 p-10 text-center"
+      class="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-10 text-center dark:border-slate-700 dark:bg-slate-900/40"
     >
-      <p class="text-sm text-slate-400">No completed sessions yet today.</p>
-      <p class="mt-1 text-xs text-slate-500">Finish or skip a pomodoro phase to log it here.</p>
+      <p class="text-sm text-stone-500 dark:text-slate-400">No completed sessions yet today.</p>
+      <p class="mt-1 text-xs text-stone-400 dark:text-slate-500">Finish or skip a pomodoro phase to log it here.</p>
     </article>
 
     <ul v-else class="space-y-2">
       <li
         v-for="session in sessions"
         :key="session.id"
-        class="flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3"
+        class="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900/60"
       >
         <div class="min-w-0">
-          <p class="text-sm font-medium text-slate-100">
+          <p class="text-sm font-medium text-stone-900 dark:text-slate-100">
             {{ formatSessionKind(session.kind) }}
           </p>
-          <p v-if="session.taskTitle" class="truncate text-xs text-slate-500">
+          <p v-if="session.taskTitle" class="truncate text-xs text-stone-500 dark:text-slate-500">
             {{ session.taskTitle }}
           </p>
         </div>
         <div class="shrink-0 text-right">
-          <p class="font-mono text-sm text-teal-400">{{ formatDuration(session.durationSeconds) }}</p>
-          <p class="text-xs text-slate-500">{{ formatTimeOfDay(session.completedAt) }}</p>
+          <p class="font-mono text-sm text-teal-700 dark:text-teal-400">{{ formatDuration(session.durationSeconds) }}</p>
+          <p class="text-xs text-stone-500 dark:text-slate-500">{{ formatTimeOfDay(session.completedAt) }}</p>
         </div>
       </li>
     </ul>

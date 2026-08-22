@@ -71,9 +71,9 @@ function onCreateTask() {
 
 <template>
   <article
-    class="flex flex-col gap-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 lg:p-8"
+    class="flex flex-col gap-6 rounded-2xl border border-stone-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900/80 lg:p-8"
   >
-    <div class="flex gap-6 border-b border-slate-800 pb-1">
+    <div class="flex gap-6 border-b border-stone-200 pb-1 dark:border-slate-800">
       <button
         v-for="tab in tabs"
         :key="tab.id"
@@ -81,8 +81,8 @@ function onCreateTask() {
         class="border-b-2 pb-3 text-sm font-medium transition"
         :class="
           activeTab === tab.id
-            ? 'border-teal-400 text-teal-400'
-            : 'border-transparent text-slate-500 hover:text-slate-300'
+            ? 'border-teal-500 text-teal-600 dark:border-teal-400 dark:text-teal-400'
+            : 'border-transparent text-stone-500 hover:text-stone-700 dark:text-slate-500 dark:hover:text-slate-300'
         "
         @click="onSelectTab(tab.id)"
       >
@@ -103,10 +103,10 @@ function onCreateTask() {
           v-for="slot in sessionSlots"
           :key="slot"
           class="h-2 w-2 rounded-full"
-          :class="slot <= sessionInCycle ? 'bg-teal-400' : 'bg-slate-700'"
+          :class="slot <= sessionInCycle ? 'bg-teal-500 dark:bg-teal-400' : 'bg-stone-200 dark:bg-slate-700'"
         />
       </div>
-      <p class="text-sm text-slate-400">
+      <p class="text-sm text-stone-500 dark:text-slate-400">
         Session {{ sessionInCycle }}/{{ LONG_BREAK_INTERVAL }}
       </p>
     </div>
@@ -114,7 +114,7 @@ function onCreateTask() {
     <div class="relative">
       <button
         type="button"
-        class="flex w-full items-center justify-between gap-3 rounded-full border border-slate-700 bg-slate-950/60 px-4 py-3 text-left text-sm text-slate-200 transition hover:border-slate-600"
+        class="flex w-full items-center justify-between gap-3 rounded-full border border-stone-300 bg-stone-50 px-4 py-3 text-left text-sm text-stone-800 transition hover:border-stone-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-200 dark:hover:border-slate-600"
         @click="taskPickerOpen = !taskPickerOpen"
       >
         <span class="flex min-w-0 items-center gap-2">
@@ -131,19 +131,19 @@ function onCreateTask() {
 
       <div
         v-if="taskPickerOpen"
-        class="absolute inset-x-0 top-full z-10 mt-2 overflow-hidden rounded-xl border border-slate-700 bg-slate-950 shadow-xl"
+        class="absolute inset-x-0 top-full z-10 mt-2 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-950"
       >
         <div class="max-h-48 overflow-y-auto p-2">
           <button
             v-for="task in openTasks"
             :key="task.id"
             type="button"
-            class="block w-full truncate rounded-lg px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
+            class="block w-full truncate rounded-lg px-3 py-2 text-left text-sm text-stone-800 hover:bg-stone-100 dark:text-slate-200 dark:hover:bg-slate-800"
             @click="onPickTask(task.id)"
           >
             {{ task.title }}
           </button>
-          <p v-if="openTasks.length === 0" class="px-3 py-2 text-sm text-slate-500">
+          <p v-if="openTasks.length === 0" class="px-3 py-2 text-sm text-stone-500 dark:text-slate-500">
             No open tasks.
             <RouterLink to="/tasks" class="text-teal-400 hover:underline">Add one</RouterLink>
           </p>
@@ -153,7 +153,7 @@ function onCreateTask() {
             v-model="newTaskTitle"
             type="text"
             placeholder="New task…"
-            class="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-teal-500 focus:outline-none"
+            class="min-w-0 flex-1 rounded-lg border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-teal-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             @keydown.enter.prevent="onCreateTask"
           />
           <button
@@ -170,7 +170,7 @@ function onCreateTask() {
     <div class="flex items-center justify-center gap-4">
       <button
         type="button"
-        class="flex h-12 w-12 items-center justify-center rounded-full border border-slate-700 text-sm font-semibold text-slate-300 transition hover:border-teal-500/50 hover:text-teal-400 disabled:cursor-not-allowed disabled:opacity-40"
+        class="flex h-12 w-12 items-center justify-center rounded-full border border-stone-300 text-sm font-semibold text-stone-600 transition hover:border-teal-500/50 hover:text-teal-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:border-teal-500/50 dark:hover:text-teal-400"
         :disabled="!canAddFiveMinutes"
         title="Add 5 minutes"
         @click="addFiveMinutes"
@@ -180,7 +180,7 @@ function onCreateTask() {
 
       <button
         type="button"
-        class="flex h-16 w-16 items-center justify-center rounded-full bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20 transition hover:bg-teal-300"
+        class="flex h-16 w-16 items-center justify-center rounded-full bg-teal-600 text-white shadow-lg shadow-teal-500/20 transition hover:bg-teal-500 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
         :title="primaryActionLabel"
         @click="toggle"
       >
@@ -207,7 +207,7 @@ function onCreateTask() {
 
       <button
         type="button"
-        class="flex h-12 w-12 items-center justify-center rounded-full border border-slate-700 text-slate-300 transition hover:border-teal-500/50 hover:text-teal-400 disabled:cursor-not-allowed disabled:opacity-40"
+        class="flex h-12 w-12 items-center justify-center rounded-full border border-stone-300 text-stone-600 transition hover:border-teal-500/50 hover:text-teal-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:border-teal-500/50 dark:hover:text-teal-400"
         :disabled="!canSkip"
         title="Skip phase"
         @click="skip"

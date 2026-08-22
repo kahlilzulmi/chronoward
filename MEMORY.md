@@ -544,4 +544,13 @@
 **What was rejected and why:**
 - Remote live context on paired device row — no cross-device sensor stream yet; show Connected + sync note only.
 
+## 2026-08-22 — UI Phase 3 theme consistency
+
+**What was decided:** Restyle Settings, Help, Onboarding, and PairingClient to match dark-default shell using shared `AppCard` + `themeClasses.ts`. Dashboard cards and Insights chart respect light/dark toggle. Sensor status badges use translucent tones for dark cards.
+
+**Why:** Phase 2 left utility pages on light stone cards inside the dark shell; Profile toggle had no effect on dashboard or Settings.
+
+**What was rejected and why:**
+- Full design-token rewrite of every component — shared class strings only, no new CSS framework.
+
 

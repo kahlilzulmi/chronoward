@@ -15,8 +15,12 @@ import {
   type DateRangePreset,
   type DeviceTypeFilter,
 } from "../services/analytics";
+import { useTheme } from "../composables/useTheme";
+import { dashboardCardClass, headingClass } from "../ui/themeClasses";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
+
+const { theme } = useTheme();
 
 const TOP_N = 8;
 
@@ -77,14 +81,14 @@ const chartData = computed<ChartData<"doughnut">>(() => ({
           ? OTHER_COLOR
           : SLICE_COLORS[index % SLICE_COLORS.length],
       ),
-      borderColor: "#0f172a",
+      borderColor: theme.value === "dark" ? "#0f172a" : "#ffffff",
       borderWidth: 2,
       hoverOffset: 4,
     },
   ],
 }));
 
-const chartOptions: ChartOptions<"doughnut"> = {
+const chartOptions = computed<ChartOptions<"doughnut">>(() => ({
   responsive: true,
   maintainAspectRatio: false,
   cutout: "58%",
@@ -92,7 +96,7 @@ const chartOptions: ChartOptions<"doughnut"> = {
     legend: {
       position: "bottom",
       labels: {
-        color: "#f8fafc",
+        color: theme.value === "dark" ? "#f8fafc" : "#44403c",
         boxWidth: 10,
         padding: 12,
         font: { size: 11 },
@@ -107,12 +111,12 @@ const chartOptions: ChartOptions<"doughnut"> = {
       },
     },
   },
-};
+}));
 
 const pillIdle =
-  "rounded-full bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-700";
+  "rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-semibold text-stone-600 transition hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700";
 const pillActive =
-  "rounded-full bg-teal-400 px-2.5 py-1 text-[11px] font-semibold text-slate-950";
+  "rounded-full bg-teal-500 px-2.5 py-1 text-[11px] font-semibold text-white dark:bg-teal-400 dark:text-slate-950";
 
 let fetchGen = 0;
 
@@ -136,13 +140,13 @@ watch([dateRange, deviceType], () => {
 </script>
 
 <template>
-  <article class="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-slate-100">
+  <article :class="[dashboardCardClass, 'text-stone-900 dark:text-slate-100']">
     <div class="mb-4 flex items-center gap-2">
-      <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+      <svg class="h-4 w-4 text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
         <circle cx="12" cy="12" r="8.5" />
         <path d="M12 7v5l3 2" stroke-linecap="round" />
       </svg>
-      <p class="text-sm font-semibold text-slate-100">Screen Time</p>
+      <p :class="headingClass">Screen Time</p>
     </div>
 
     <div class="mt-4 space-y-2">
@@ -193,12 +197,12 @@ watch([dateRange, deviceType], () => {
     </div>
 
     <div class="mt-4 min-h-52">
-      <p v-if="loading" class="py-10 text-center text-sm text-slate-400">
+      <p v-if="loading" class="py-10 text-center text-sm text-stone-500 dark:text-slate-400">
         Loading usage…
       </p>
       <p
         v-else-if="!hasData"
-        class="py-10 text-center text-sm text-slate-400"
+        class="py-10 text-center text-sm text-stone-500 dark:text-slate-400"
       >
         No app usage yet for this period. All Devices merges after Drive sync.
       </p>

@@ -46,7 +46,7 @@ const timeStr = computed(
   <div class="mx-auto flex w-full max-w-[260px] flex-col items-center gap-2" aria-live="polite">
     <p
       class="min-h-[14px] text-[10px] font-semibold uppercase tracking-[0.2em]"
-      :class="isRunning ? 'text-teal-400' : 'invisible'"
+      :class="isRunning ? 'text-teal-600 dark:text-teal-400' : 'invisible'"
     >
       Running
     </p>
@@ -57,7 +57,7 @@ const timeStr = computed(
         :r="radius"
         fill="none"
         stroke="currentColor"
-        class="text-slate-800"
+        class="text-stone-200 dark:text-slate-800"
         :stroke-width="stroke"
       />
       <circle
@@ -79,7 +79,7 @@ const timeStr = computed(
         text-anchor="middle"
         dominant-baseline="central"
         fill="currentColor"
-        class="fill-slate-100 font-mono text-[2.75rem] font-semibold"
+        class="fill-stone-900 font-mono text-[2.75rem] font-semibold dark:fill-slate-100"
       >
         {{ timeStr }}
       </text>
