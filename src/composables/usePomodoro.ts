@@ -17,6 +17,8 @@ export type PomodoroPhase = "idle" | "work" | "shortBreak" | "longBreak";
 
 const PRE_ALERT_SECONDS = 60;
 const TICK_MS = 200;
+const TIMER_STORAGE_KEY = "chronoward.timer";
+const CATCH_UP_GUARD = 24;
 
 const PHASE_LABELS: Record<PomodoroPhase, string> = {
   idle: "Idle",
@@ -24,6 +26,19 @@ const PHASE_LABELS: Record<PomodoroPhase, string> = {
   shortBreak: "Short Break",
   longBreak: "Long Break",
 };
+
+interface TimerSnapshot {
+  version: 1;
+  phase: PomodoroPhase;
+  isRunning: boolean;
+  /** Wall-clock end while running; 0 when paused/idle. */
+  targetEndMs: number;
+  remainingSeconds: number;
+  sessionDurationSeconds: number;
+  completedWorkCount: number;
+  focusedSecondsCompleted: number;
+  preAlertFired: boolean;
+}
 
 const phase = ref<PomodoroPhase>("idle");
 const isRunning = ref(false);
@@ -37,6 +52,8 @@ let preAlertFired = false;
 let nativePreAlertArmed = false;
 let nativePreAlertEpoch = 0;
 let sessionDurationSeconds = settings.workMinutes * 60;
+/** Suppress phase-start notifications while replaying missed time after kill. */
+let suppressPhaseNotify = false;
 
 const isAndroidRuntime = /android/i.test(
   typeof navigator === "undefined" ? "" : navigator.userAgent,
@@ -46,6 +63,84 @@ const ADD_FIVE_MINUTES_SECONDS = 300;
 const ADD_FIVE_MINUTES_MS = 300_000;
 
 let notificationActionStarted = false;
+let hydrated = false;
+
+function isPomodoroPhase(value: unknown): value is PomodoroPhase {
+  return (
+    value === "idle" ||
+    value === "work" ||
+    value === "shortBreak" ||
+    value === "longBreak"
+  );
+}
+
+function clearTimerSnapshot() {
+  if (typeof localStorage === "undefined") {
+    return;
+  }
+  localStorage.removeItem(TIMER_STORAGE_KEY);
+}
+
+function persistTimerSnapshot() {
+  if (typeof localStorage === "undefined" || !hydrated) {
+    return;
+  }
+  if (phase.value === "idle") {
+    clearTimerSnapshot();
+    return;
+  }
+  const snapshot: TimerSnapshot = {
+    version: 1,
+    phase: phase.value,
+    isRunning: isRunning.value,
+    targetEndMs: isRunning.value ? targetEndMs : 0,
+    remainingSeconds: remainingSeconds.value,
+    sessionDurationSeconds,
+    completedWorkCount: completedWorkCount.value,
+    focusedSecondsCompleted: focusedSecondsCompleted.value,
+    preAlertFired,
+  };
+  localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(snapshot));
+}
+
+function loadTimerSnapshot(): TimerSnapshot | null {
+  if (typeof localStorage === "undefined") {
+    return null;
+  }
+  try {
+    const raw = localStorage.getItem(TIMER_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as Partial<TimerSnapshot>;
+    if (parsed.version !== 1 || !isPomodoroPhase(parsed.phase)) {
+      return null;
+    }
+    if (parsed.phase === "idle") {
+      return null;
+    }
+    return {
+      version: 1,
+      phase: parsed.phase,
+      isRunning: Boolean(parsed.isRunning),
+      targetEndMs: Number(parsed.targetEndMs) || 0,
+      remainingSeconds: Math.max(0, Number(parsed.remainingSeconds) || 0),
+      sessionDurationSeconds: Math.max(
+        1,
+        Number(parsed.sessionDurationSeconds) ||
+          durationSecondsFor(parsed.phase),
+      ),
+      completedWorkCount: Math.max(0, Number(parsed.completedWorkCount) || 0),
+      focusedSecondsCompleted: Math.max(
+        0,
+        Number(parsed.focusedSecondsCompleted) || 0,
+      ),
+      preAlertFired: Boolean(parsed.preAlertFired),
+    };
+  } catch {
+    return null;
+  }
+}
 
 function nativeTitle(): string {
   return `Chronoward - ${PHASE_LABELS[phase.value]}`;
@@ -202,9 +297,11 @@ function tick() {
   }
 }
 
-function startTicking(fromResume = false) {
+function startTicking(fromResume = false, preserveTarget = false) {
   clearTick();
-  targetEndMs = Date.now() + remainingSeconds.value * 1000;
+  if (!preserveTarget) {
+    targetEndMs = Date.now() + remainingSeconds.value * 1000;
+  }
   isRunning.value = true;
   intervalId = setInterval(tick, TICK_MS);
   armNativePreAlert();
@@ -213,6 +310,7 @@ function startTicking(fromResume = false) {
   } else {
     syncNativeStart();
   }
+  persistTimerSnapshot();
 }
 
 function enterPhase(nextPhase: PomodoroPhase, autoRun: boolean) {
@@ -223,12 +321,14 @@ function enterPhase(nextPhase: PomodoroPhase, autoRun: boolean) {
   isRunning.value = false;
   armPreAlert();
 
-  if (nextPhase === "work") {
-    void notifyUser("Chronoward", "Focus session started. Stay on task.");
-  } else if (nextPhase === "shortBreak") {
-    void notifyUser("Chronoward", "Short break started.");
-  } else if (nextPhase === "longBreak") {
-    void notifyUser("Chronoward", "Long break started.");
+  if (!suppressPhaseNotify) {
+    if (nextPhase === "work") {
+      void notifyUser("Chronoward", "Focus session started. Stay on task.");
+    } else if (nextPhase === "shortBreak") {
+      void notifyUser("Chronoward", "Short break started.");
+    } else if (nextPhase === "longBreak") {
+      void notifyUser("Chronoward", "Long break started.");
+    }
   }
 
   if (autoRun && nextPhase !== "idle") {
@@ -236,6 +336,7 @@ function enterPhase(nextPhase: PomodoroPhase, autoRun: boolean) {
   } else {
     disarmNativePreAlert();
     syncNativeClear();
+    persistTimerSnapshot();
   }
 }
 
@@ -244,6 +345,63 @@ function nextBreakPhase(): PomodoroPhase {
     return "longBreak";
   }
   return "shortBreak";
+}
+
+/**
+ * After a kill/background, replay auto-start chain from a past phase end
+ * so we land on the phase that should be active *now*, not a fresh full duration.
+ */
+function catchUpFromExpiredEnd(phaseEndedAtMs: number) {
+  clearTick();
+  isRunning.value = false;
+  let cursor = phaseEndedAtMs;
+  const now = Date.now();
+  suppressPhaseNotify = true;
+
+  try {
+    for (let i = 0; i < CATCH_UP_GUARD; i += 1) {
+      if (phase.value === "work") {
+        focusedSecondsCompleted.value += sessionDurationSeconds;
+        completedWorkCount.value += 1;
+        const next = nextBreakPhase();
+        if (!settings.autoStartBreaks) {
+          enterPhase("idle", false);
+          return;
+        }
+        phase.value = next;
+        sessionDurationSeconds = durationSecondsFor(next);
+      } else if (phase.value === "shortBreak" || phase.value === "longBreak") {
+        if (!settings.autoStartWork) {
+          enterPhase("idle", false);
+          return;
+        }
+        phase.value = "work";
+        sessionDurationSeconds = durationSecondsFor("work");
+      } else {
+        enterPhase("idle", false);
+        return;
+      }
+
+      const nextEnd = cursor + sessionDurationSeconds * 1000;
+      if (nextEnd > now) {
+        targetEndMs = nextEnd;
+        remainingSeconds.value = Math.max(
+          0,
+          Math.ceil((nextEnd - now) / 1000),
+        );
+        preAlertFired = remainingSeconds.value < PRE_ALERT_SECONDS;
+        startTicking(true, true);
+        return;
+      }
+
+      remainingSeconds.value = 0;
+      cursor = nextEnd;
+    }
+
+    enterPhase("idle", false);
+  } finally {
+    suppressPhaseNotify = false;
+  }
 }
 
 function completeCurrent() {
@@ -290,8 +448,10 @@ function pause() {
 
   clearTick();
   isRunning.value = false;
+  targetEndMs = 0;
   disarmNativePreAlert();
   syncNativeUpdate(true);
+  persistTimerSnapshot();
 }
 
 function toggle() {
@@ -320,7 +480,9 @@ function addFiveMinutes() {
     );
   }
   remainingSeconds.value += ADD_FIVE_MINUTES_SECONDS;
-  targetEndMs += ADD_FIVE_MINUTES_MS;
+  if (isRunning.value) {
+    targetEndMs += ADD_FIVE_MINUTES_MS;
+  }
   preAlertFired = false;
   armPreAlert();
   if (isRunning.value) {
@@ -329,10 +491,73 @@ function addFiveMinutes() {
   } else {
     syncNativeUpdate(true);
   }
+  persistTimerSnapshot();
 }
 
 function reset() {
   enterPhase("idle", false);
+}
+
+function catchUpAfterResume() {
+  if (!isRunning.value || phase.value === "idle") {
+    return;
+  }
+  const now = Date.now();
+  if (now >= targetEndMs) {
+    const endedAt = targetEndMs;
+    remainingSeconds.value = 0;
+    catchUpFromExpiredEnd(endedAt);
+    return;
+  }
+  const nextSeconds = Math.max(0, Math.ceil((targetEndMs - now) / 1000));
+  maybePreAlert(remainingSeconds.value, nextSeconds);
+  remainingSeconds.value = nextSeconds;
+  persistTimerSnapshot();
+}
+
+function hydrateTimerFromStorage() {
+  const snap = loadTimerSnapshot();
+  hydrated = true;
+  if (!snap) {
+    return;
+  }
+
+  phase.value = snap.phase;
+  sessionDurationSeconds = snap.sessionDurationSeconds;
+  completedWorkCount.value = snap.completedWorkCount;
+  focusedSecondsCompleted.value = snap.focusedSecondsCompleted;
+  preAlertFired = snap.preAlertFired;
+
+  if (!snap.isRunning) {
+    remainingSeconds.value = snap.remainingSeconds;
+    isRunning.value = false;
+    targetEndMs = 0;
+    persistTimerSnapshot();
+    return;
+  }
+
+  if (!snap.targetEndMs || snap.targetEndMs <= 0) {
+    remainingSeconds.value = snap.remainingSeconds;
+    isRunning.value = false;
+    persistTimerSnapshot();
+    return;
+  }
+
+  const now = Date.now();
+  if (now >= snap.targetEndMs) {
+    remainingSeconds.value = 0;
+    isRunning.value = false;
+    targetEndMs = snap.targetEndMs;
+    catchUpFromExpiredEnd(snap.targetEndMs);
+    return;
+  }
+
+  targetEndMs = snap.targetEndMs;
+  remainingSeconds.value = Math.max(
+    0,
+    Math.ceil((snap.targetEndMs - now) / 1000),
+  );
+  startTicking(true, true);
 }
 
 function dispatchNotificationAction(payload: unknown) {
@@ -368,24 +593,18 @@ function dispatchNotificationAction(payload: unknown) {
   }
 }
 
-function catchUpAfterResume() {
-  if (!isRunning.value || phase.value === "idle") return;
-  const now = Date.now();
-  if (now >= targetEndMs) {
-    remainingSeconds.value = 0;
-    completeCurrent();
-    return;
-  }
-  const nextSeconds = Math.max(0, Math.ceil((targetEndMs - now) / 1000));
-  maybePreAlert(remainingSeconds.value, nextSeconds);
-  remainingSeconds.value = nextSeconds;
-}
-
 if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      persistTimerSnapshot();
+      return;
+    }
     if (document.visibilityState === "visible") {
       catchUpAfterResume();
     }
+  });
+  window.addEventListener("pagehide", () => {
+    persistTimerSnapshot();
   });
 }
 
@@ -492,6 +711,8 @@ const nextBreakKind = computed(() => {
   const nextWorkSlot = (completedWorkCount.value % LONG_BREAK_INTERVAL) + 1;
   return nextWorkSlot === LONG_BREAK_INTERVAL ? "Long break" : "Short break";
 });
+
+hydrateTimerFromStorage();
 
 export function usePomodoro() {
   startNotificationActionListener();

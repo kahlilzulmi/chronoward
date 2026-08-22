@@ -43,6 +43,10 @@ pub fn run() {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let builder = builder.plugin(tauri_plugin_websocket::init());
 
+    // Phase 5.1: `.plugin(tauri_plugin_powersync::init())` is blocked until
+    // tauri-plugin-powersync can share libsqlite3-sys with tauri-plugin-sql.
+    // See ERRORS.md (2026-08-21).
+
     #[cfg(any(target_os = "android", target_os = "ios"))]
     let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
 

@@ -23,7 +23,6 @@ const {
   isAndroid,
   isLoaded,
   needsUsageAccess,
-  needsAccessibility,
   fetchStatus,
   requestPermissions,
 } = useAndroidTrackingPermissions();

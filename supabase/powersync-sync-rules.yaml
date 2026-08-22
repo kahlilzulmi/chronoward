@@ -1,0 +1,14 @@
+# PowerSync sync rules sketch (Supabase source)
+#
+# Paste into the PowerSync Dashboard → Sync Rules (or Sync Streams equivalent)
+# after connecting your Supabase project. Adjust syntax if the dashboard
+# offers Sync Streams instead of legacy bucket_definitions.
+#
+# Auth: PowerSync must receive the Supabase JWT (user access token).
+# request.user_id() is the JWT `sub` (auth.users id).
+
+bucket_definitions:
+  by_user:
+    parameters: select request.user_id() as user_id
+    data:
+      - select * from app_usage where user_id = bucket.user_id

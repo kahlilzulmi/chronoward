@@ -25,3 +25,13 @@ dist-ssr
 
 # Google OAuth client IDs (copy from google-oauth.example.json)
 src-tauri/google-oauth.json
+
+# Secrets / local env (keep .env.example)
+.env
+.env.*.local
+
+# Sideload / release artifacts (never commit binaries)
+*.apk
+*.apk.idsig
+*-aligned.apk
+*-unsigned.apk

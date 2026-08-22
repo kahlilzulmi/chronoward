@@ -28,6 +28,9 @@ sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio
 tauri-plugin-notification = "2.3.3"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-chronoward-tracking = { path = "plugins/chronoward-tracking" }
+# Phase 5.1: do NOT uncomment until libsqlite3-sys coexistence is solved.
+# `cargo add tauri-plugin-powersync` conflicts with tauri-plugin-sql / sqlx 0.8
+# (rusqlite 0.39 needs libsqlite3-sys ^0.37). See ERRORS.md.
 
 [target.'cfg(windows)'.dependencies]
 uiautomation = { version = "0.25.0", features = ["control"] }
@@ -44,6 +47,7 @@ windows = { version = "0.62.2", features = [
 
 # Desktop LAN pairing host (not compiled into Android/iOS).
 # websocket stays desktop-only: rustls/ring cannot find NDK clang.exe on Windows.
+# powersync stays desktop-only until Android NDK linker risk is measured (Phase 5.1).
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 axum = { version = "0.8", features = ["ws"] }
 base64 = "0.22"

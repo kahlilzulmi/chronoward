@@ -136,3 +136,18 @@
 
 **Note for next time:**
 - If the URL then loads but Google rejects the client, that is a separate issue: Desktop client ID must look like `PROJECTNUMBER-xxxxx.apps.googleusercontent.com`, and token POST often needs `desktopClientSecret`.
+
+## 2026-08-21 — PowerSync + tauri-plugin-sql: libsqlite3-sys conflict
+
+**What didn't work:**
+- Adding `tauri-plugin-powersync` 0.0.4 / 0.0.6 alongside existing `tauri-plugin-sql` + `sqlx 0.8.6`. Cargo aborts: PowerSync → `rusqlite 0.39` → `libsqlite3-sys ^0.37`; sql plugin → `sqlx 0.8` → older `libsqlite3-sys`. Only one crate may `links = "sqlite3"`.
+- Bumping our direct `sqlx` to `0.9.0` — `tauri-plugin-sql` still depends on `sqlx ^0.8`, so the conflict remains.
+
+**What worked instead:**
+- Ship frontend 5.1–5.2 (`@powersync/tauri-plugin`, `@supabase/supabase-js`, `AppSchema` / `db.ts` / `supabase.ts`).
+- Do **not** list `tauri-plugin-powersync` in `Cargo.toml` at all until coexistence is fixed (even `optional = true` still fails resolution because of `links = "sqlite3"`).
+- Do **not** add `powersync:default` to capabilities until the crate is present (Tauri build rejects unknown permission identifiers).
+- Leave a comment in `Cargo.toml` / `lib.rs` pointing at this entry.
+
+**Note for next time:**
+- Android NDK risk is secondary until this desktop resolution conflict is fixed. Next unblock options: drop `tauri-plugin-sql` (and possibly our `sqlx` direct dep once writes move to PowerSync), wait for a Tauri SQL plugin on sqlx 0.9+, or patch/fork.

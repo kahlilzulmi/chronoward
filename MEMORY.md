@@ -469,4 +469,58 @@
 - One giant `CONTRIBUTING.md` only — weaker GitHub landing page.
 - Split `docs/` (setup / architecture / android / windows) — more files to drift from MEMORY.
 
+## 2026-08-21 — Pivot: PowerSync + Supabase replaces Drive ledger
+
+**What was decided:** PowerSync + Supabase becomes the sole shared ledger / source of truth for multi-device usage sync. Google Drive appDataFolder (G3.3) is no longer the target architecture. Phase 5 ships Path B first: install + schema + clients only (5.1–5.2), then pause. Drive Rust/Kotlin/UI code stays in the tree until PowerSync desktop compile is verified; do not delete it in this slice. Do not migrate `tauri-plugin-sql` / `db.rs` / ingestion yet. Local PowerSync file is `powersync.db` (not `chronoward.db`) so it does not collide with `tauri-plugin-sql`. Client schema includes `user_id`. Schema helpers come from `@powersync/common` (official Tauri docs), not re-exported from `@powersync/tauri-plugin`.
+
+**Compile reality (same day):** Enabling `tauri-plugin-powersync` 0.0.6 fails Cargo resolution: `rusqlite 0.39` needs `libsqlite3-sys ^0.37`, while `tauri-plugin-sql` → `sqlx 0.8` pins an older `libsqlite3-sys` (`links = "sqlite3"` allows only one). Bumping our direct `sqlx` to 0.9 does not help while `tauri-plugin-sql` still pulls sqlx 0.8. Even `optional = true` still fails resolution. The crate is therefore **commented out** of `Cargo.toml` (not listed as a dependency). `powersync:default` is not in capabilities until the crate exists. Default `cargo check` (desktop) succeeds. Android NDK was not reached — resolution fails before compile.
+
+**Why:** User pivoted after dual-SQLite and NDK risks were flagged. Drive avoided a Chronoward backend; Supabase + PowerSync is the chosen backend path going forward.
+
+**What was rejected and why:**
+- Deleting Drive code in the same pass — keep until compile proof.
+- Full 5.3–5.4 connector + tracking rewrite in this pass — pause after 5.1–5.2.
+- Sharing `chronoward.db` between PowerSync and `tauri-plugin-sql` — two engines, one file is unsafe.
+- Leaving `tauri-plugin-powersync` as a hard (or optional) dependency — breaks Cargo resolution until sql coexistence is solved.
+
+## 2026-08-21 — Unblock PowerSync by waiting on tauri-plugin-sql
+
+**What was decided:** Do not remove `tauri-plugin-sql` or patch/fork sqlite crates for now. Wait for an upstream `tauri-plugin-sql` (or equivalent) that uses sqlx 0.9+ / a `libsqlite3-sys` range compatible with PowerSync’s `rusqlite 0.39` (`^0.37`). Until then: keep frontend PowerSync/Supabase clients; keep Drive code; keep `tauri-plugin-powersync` commented out of `Cargo.toml`; do not start Phase 5.3 connector work that requires the Rust plugin.
+
+**Why:** User chose option 2 after the Phase 5.1–5.2 pause. Lowest risk to the current private-beta path while the ledger pivot is incomplete.
+
+**What was rejected and why:**
+- Option 1 (drop `tauri-plugin-sql` now) — premature while ingestion still uses sql plugin + `db.rs`.
+- Option 3 (patch/fork) — last resort; more maintenance than waiting.
+
+## 2026-08-21 — Supabase cloud prep (option 1)
+
+**What was decided:** While waiting on `tauri-plugin-sql`, ship manual Supabase prep under `supabase/`: `001_app_usage.sql` (table + `user_id` default `auth.uid()` + RLS), `powersync-sync-rules.yaml` sketch, and `supabase/README.md` checklist. Extend `.env.example` with `VITE_POWERSYNC_URL`. Do not call Supabase/PowerSync APIs from the agent. Do not enable Rust PowerSync or rewrite ingestion.
+
+**Why:** User chose next-slice option 1 so the cloud schema is ready before 5.3.
+
+**What was rejected and why:**
+- Auto-applying migrations from the app — Supabase SQL Editor is the source of truth for this prep.
+- Syncing URLs by default — keep Drive-era privacy; prefer null `url` until product decides.
+
+## 2026-08-21 — Timer targetEndMs persistence (A P3)
+
+**What was decided:** Persist active pomodoro session to `localStorage` key `chronoward.timer`: phase, `isRunning`, wall-clock `targetEndMs` (when running), remaining (when paused), session duration, work/focus counters, pre-alert flag. On load and on `visibilitychange`/`pagehide`, restore and catch up. If the end time is in the past, replay auto-start chain from the expired end (not “restart full duration from now”) so long kills land on the correct phase. Suppress phase-start notifications during that replay. Idle clears the snapshot.
+
+**Why:** Android/WebView kill/background was leaving timers wrong or stuck; wall-clock end is the source of truth while running.
+
+**What was rejected and why:**
+- Persisting only remaining seconds — drifts across kill.
+- Completing a single phase then always starting the next from `Date.now()` — wrong if multiple auto-started phases elapsed while dead.
+
+## 2026-08-21 — Release hygiene (A P5)
+
+**What was decided:** Document private-beta APK build + `zipalign`/`apksigner` (debug keystore) in CONTRIBUTING; refresh README for PowerSync-target ledger + `.env` / supabase links; expand `.gitignore` for `.env`, `*-aligned.apk`, `*-unsigned.apk`. Do not commit binaries. Do not delete `src-tauri/2` until the user confirms (accidental npm dump).
+
+**Why:** Sideload failures were often unsigned release APKs; docs were still Drive-first.
+
+**What was rejected and why:**
+- Adding a npm script that shells the full Android release pipeline — env (JDK 21 path) is machine-specific; document first.
+- Deleting APKs from disk — user may still need them; gitignore is enough.
+
 

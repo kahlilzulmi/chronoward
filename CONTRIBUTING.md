@@ -84,7 +84,9 @@ Frontend is a two-view shell plus Help and an Android onboarding route. Native c
                                  Kotlin Drive HTTP + Google Sign-In
 ```
 
-**Device bind (G3):** same Google `sub` on PC and phone. Local SQLite is a cache. Drive `appDataFolder` is the shared ledger. LAN PIN/QR on 1422 is same-Wi-Fi fallback.
+**Device bind (target):** PowerSync + Supabase is the sole shared ledger going forward. Google Drive `appDataFolder` code remains until PowerSync Rust compiles; LAN PIN/QR on 1422 is same-Wi-Fi fallback only. See [`supabase/README.md`](supabase/README.md) for cloud schema/RLS prep.
+
+**Device bind (legacy G3, still in tree):** same Google `sub` on PC and phone with Drive `usage.jsonl` merge — do not treat as the long-term source of truth.
 
 ## Frontend conventions
 
@@ -190,10 +192,11 @@ SQLite database name: `sqlite:chronoward.db`.
 4. Pairing port is 1422+, never 1421.
 5. Do not compile `tauri-plugin-websocket`, rustls, or ring into the Android target.
 6. Do not put Windows crates on the Android crate graph.
-7. Do not commit `google-oauth.json`, Web client secrets, or APKs.
+7. Do not commit `google-oauth.json`, Web client secrets, `.env`, or APKs.
 8. Do not grant JS raw SQL execute for usage.
 9. Plugin Kotlin lives in `plugins/chronoward-tracking`, not generated app copies.
 10. Router must not await native permission checks before first paint.
+11. PowerSync Rust crate stays out of `Cargo.toml` until `tauri-plugin-sql` / `libsqlite3-sys` coexistence is fixed (ERRORS.md).
 
 ## Landmines (see ERRORS.md)
 
@@ -219,19 +222,64 @@ SQLite database name: `sqlite:chronoward.db`.
 ## What not to commit
 
 - `src-tauri/google-oauth.json`
+- `.env` (use `.env.example` only)
 - `google_account.json` / any refresh tokens
-- Release APKs and `.idsig` files
+- Release APKs, `.idsig`, `*-aligned.apk`, `*-unsigned.apk`
 - `node_modules`, `dist`, IDE junk (already gitignored)
+- Accidental shell/npm dump files (e.g. a stray `src-tauri/2`)
 
 `google-oauth.example.json` is the only OAuth template that belongs in git. It must not contain a Web application client secret.
+
+## Release / sideload APK
+
+Private beta only — not Play Store. Use **JDK 21** (JetBrains toolchain under `~/.gradle/jdks/...`), not Android Studio JBR 25.
+
+### Build (arm64 + armv7, release, split)
+
+From the repo root (adjust `JAVA_HOME` / `ANDROID_HOME` to your machine):
+
+```bat
+set JAVA_HOME=%USERPROFILE%\.gradle\jdks\jetbrains_s_r_o_-21-amd64-windows.2
+set ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk
+node node_modules\@tauri-apps\cli\tauri.js android build --apk --split-per-abi -t aarch64 -t armv7 --ci
+```
+
+Outputs land under `src-tauri/gen/android/app/build/outputs/apk/`:
+
+| Artifact | Notes |
+| --- | --- |
+| `arm64/release/app-arm64-release-unsigned.apk` | Poco M4 Pro 4G / most phones — **must sign** |
+| `arm/release/app-arm-release-unsigned.apk` | 32-bit ROMs only — **must sign** |
+
+Debug APKs are larger and signed with the debug keystore automatically. Prefer signed **release** for sideload size.
+
+### Sign (debug keystore is enough for private beta)
+
+Unsigned APKs fail install with a generic “App not installed” on MIUI. Example for arm64:
+
+```bat
+set BT=%LOCALAPPDATA%\Android\Sdk\build-tools\36.0.0
+"%BT%\zipalign.exe" -f -p 4 src-tauri\gen\android\app\build\outputs\apk\arm64\release\app-arm64-release-unsigned.apk app-arm64-aligned.apk
+"%BT%\apksigner.bat" sign --ks %USERPROFILE%\.android\debug.keystore --ks-pass pass:android --key-pass pass:android --out Chronoward-arm64-release.apk app-arm64-aligned.apk
+"%BT%\apksigner.bat" verify --verbose Chronoward-arm64-release.apk
+```
+
+Copy the signed APK via USB. Uninstall any older Chronoward first if the signing key changed. Keep ≥500 MB free on the phone when testing fat debug builds.
+
+### Do not ship
+
+- `*-unsigned.apk` to devices
+- Web client secrets inside the APK (`google-oauth.json` must not contain them)
+- Committed APKs / `.idsig` (gitignored)
 
 ## Testing / QA (private beta)
 
 There is no CI suite yet. Before a PR that touches a platform:
 
-- **Desktop:** `npm run desktop:dev` — timer, Live Sensor ACTIVE after switching windows, Settings persist, Google sign-in, Sync now, pairing PIN visible.
-- **Android:** `npm run android:dev` — Usage Access onboarding, APP-ONLY without Accessibility, shade pre-alert with screen off, ongoing notification actions, QR or PIN connect to desktop `:1422`.
+- **Desktop:** `npm run desktop:dev` — timer, Live Sensor ACTIVE after switching windows, Settings persist, Google sign-in, Sync now, pairing PIN visible. Kill/reopen mid-session: countdown should continue from wall clock.
+- **Android:** `npm run android:dev` — Usage Access onboarding, APP-ONLY without Accessibility, shade pre-alert with screen off, ongoing notification actions, QR or PIN connect to desktop `:1422`. Same timer persistence check after force-stop.
 - **Analytics:** log >2s on both devices, confirm pie filters (today / 7 days, desktop / mobile / all).
 - **Intervention:** hit a blocklist domain during Work; ignored apps (cursor, code, …) must not trigger.
+- **Sideload:** signed release APK installs; unsigned does not.
 
 Unpackaged Windows toast buttons are flaky after the process exits (no COM activator). Clicks should work while Chronoward is running.
