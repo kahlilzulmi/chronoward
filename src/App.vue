@@ -62,13 +62,13 @@ watch([isLoaded, needsUsageAccess], () => {
 
   <div
     v-else
-    class="flex min-h-dvh bg-stone-100 text-stone-900 dark:bg-slate-950 dark:text-slate-100"
+    class="flex h-dvh overflow-hidden bg-stone-100 text-stone-900 dark:bg-slate-950 dark:text-slate-100"
   >
     <AppSidebar class="hidden lg:flex" />
 
-    <div class="flex min-w-0 flex-1 flex-col">
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <main
-        class="mx-auto w-full flex-1 px-4 pb-24 pt-4 sm:px-6 lg:max-w-6xl lg:px-8 lg:pb-8"
+        class="mx-auto w-full flex-1 overflow-y-auto px-4 pb-24 pt-4 sm:px-6 lg:max-w-6xl lg:px-8 lg:pb-8"
         style="padding-top: max(1rem, env(safe-area-inset-top))"
       >
         <RouterView />

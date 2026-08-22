@@ -196,6 +196,7 @@ class TrackingPlugin(private val activity: Activity) : Plugin(activity) {
             }
             val payload = JSObject()
             payload.put("sub", sub)
+            payload.put("idToken", idToken)
             val email = claims.optString("email").ifBlank { account.email ?: "" }
             if (email.isNotBlank()) {
                 payload.put("email", email)

@@ -260,7 +260,7 @@ pub fn google_auth_status(app: AppHandle, state: State<'_, DbState>) -> Result<G
 }
 
 #[tauri::command]
-pub async fn google_sign_in(app: AppHandle, state: State<'_, DbState>) -> Result<(), String> {
+pub async fn google_sign_in(app: AppHandle, state: State<'_, DbState>) -> Result<String, String> {
     #[cfg(any(target_os = "android", target_os = "ios"))]
     {
         let _ = (app, state);
@@ -459,7 +459,7 @@ mod desktop {
         Html("<html><body style=\"font-family:sans-serif;padding:2rem\"><p>You can close this tab and return to Chronoward.</p></body></html>")
     }
 
-    pub async fn sign_in(app: AppHandle, state: State<'_, DbState>) -> Result<(), String> {
+    pub async fn sign_in(app: AppHandle, state: State<'_, DbState>) -> Result<String, String> {
         let config = load_oauth_config();
         if !config.configured {
             return Err(next_step(&config, false, false));
@@ -585,7 +585,7 @@ mod desktop {
             parsed.access_token.as_deref(),
             Some(expires_at),
         )?;
-        Ok(())
+        Ok(id_token)
     }
 
     pub(crate) async fn ensure_access_token(app: &AppHandle) -> Result<String, String> {

@@ -6,6 +6,7 @@ import {
   formatTimeOfDay,
   records,
 } from "../composables/useSessionHistory";
+import { RouterLink } from "vue-router";
 
 const sessions = computed(() => {
   const start = new Date();
@@ -36,7 +37,12 @@ const totalFocusSeconds = computed(() =>
       class="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-10 text-center dark:border-slate-700 dark:bg-slate-900/40"
     >
       <p class="text-sm text-stone-500 dark:text-slate-400">No completed sessions yet today.</p>
-      <p class="mt-1 text-xs text-stone-400 dark:text-slate-500">Finish or skip a pomodoro phase to log it here.</p>
+      <p class="mt-2 text-xs text-stone-400 dark:text-slate-500">
+        Complete or skip a pomodoro phase on the dashboard to log focus time here.
+      </p>
+      <RouterLink to="/" class="mt-4 inline-flex text-sm font-medium text-teal-700 hover:underline dark:text-teal-400">
+        Go to dashboard →
+      </RouterLink>
     </article>
 
     <ul v-else class="space-y-2">

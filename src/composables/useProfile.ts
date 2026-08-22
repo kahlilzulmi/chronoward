@@ -1,5 +1,6 @@
 import { computed, ref, watch } from "vue";
 import { supabase } from "../database/supabase";
+import { onSupabaseAuthChange } from "./useSupabaseAuth";
 
 const STORAGE_KEY = "chronoward.profile.displayName";
 
@@ -64,6 +65,10 @@ const initials = computed(() => {
 });
 
 const isAuthenticated = computed(() => Boolean(authEmail.value));
+
+onSupabaseAuthChange(() => {
+  void refreshAuthUser();
+});
 
 let authRefreshStarted = false;
 

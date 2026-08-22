@@ -73,7 +73,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="flex flex-1 flex-col gap-4 py-2 lg:gap-5 lg:py-4">
+  <section class="flex flex-1 flex-col gap-3 py-1 sm:gap-4 sm:py-2 lg:gap-5 lg:py-4">
     <div
       v-if="showAccessibilityPrompt"
       class="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4"

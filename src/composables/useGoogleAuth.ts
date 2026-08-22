@@ -56,34 +56,45 @@ export function useGoogleAuth() {
     }
   }
 
-  async function signIn() {
+  /**
+   * Google OAuth / native sheet. Returns a fresh ID token for Supabase when available.
+   * Drive sync still runs after a successful sign-in.
+   */
+  async function signIn(): Promise<string | null> {
     busy.value = true;
     errorMessage.value = "";
     cancelled.value = false;
+    let idToken: string | null = null;
     try {
       if (isAndroid) {
         const current = status.value ?? (await invoke<GoogleAuthStatus>("google_auth_status"));
         if (!current.configured || !current.serverClientId) {
           throw new Error(current.nextStep || "Google OAuth is not configured.");
         }
-        const result = await invoke<{ sub: string; email?: string }>(
-          "plugin:chronoward-tracking|google_sign_in",
-          {
-            serverClientId: current.serverClientId,
-            androidClientId: current.androidClientId ?? "",
-          },
-        );
+        const result = await invoke<{
+          sub: string;
+          email?: string;
+          idToken?: string;
+        }>("plugin:chronoward-tracking|google_sign_in", {
+          serverClientId: current.serverClientId,
+          androidClientId: current.androidClientId ?? "",
+        });
         await invoke("google_complete_sign_in", {
           payload: {
             sub: result.sub,
             email: result.email ?? null,
           },
         });
+        idToken =
+          typeof result.idToken === "string" && result.idToken.trim()
+            ? result.idToken.trim()
+            : null;
       } else {
-        await invoke("google_sign_in");
+        const token = await invoke<string>("google_sign_in");
+        idToken = typeof token === "string" && token.trim() ? token.trim() : null;
       }
       if (!active) {
-        return;
+        return idToken;
       }
       await refresh();
       try {
@@ -91,13 +102,14 @@ export function useGoogleAuth() {
         await refresh();
       } catch (syncError) {
         if (!active) {
-          return;
+          return idToken;
         }
         errorMessage.value = formatError(syncError);
       }
+      return idToken;
     } catch (error) {
       if (!active) {
-        return;
+        return null;
       }
       const message = formatError(error);
       if (isCancelledMessage(message)) {
@@ -106,6 +118,7 @@ export function useGoogleAuth() {
       } else {
         errorMessage.value = message;
       }
+      return null;
     } finally {
       if (active) {
         busy.value = false;

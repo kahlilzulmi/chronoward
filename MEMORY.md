@@ -553,4 +553,22 @@
 **What was rejected and why:**
 - Full design-token rewrite of every component — shared class strings only, no new CSS framework.
 
+## 2026-08-22 — UI Phase 4A polish + Supabase auth
+
+**What was decided:** User chose 4A over blocked 4B (PowerSync Rust). Dashboard task rename/edit, mobile spacing, task picker click-outside, Profile email OTP auth, setup guide when `.env` unset. Auth docs in `supabase/README.md` §6.
+
+**Why:** Complete UI phase without libsqlite3-sys migration risk.
+
+**What was rejected and why:**
+- 4B PowerSync migration now — still blocked by tauri-plugin-sql vs tauri-plugin-powersync (ERRORS.md).
+
+## 2026-08-23 — Supabase Google via ID token (drop email OTP)
+
+**What was decided:** Profile auth uses existing Google Sign-In ID token → `supabase.auth.signInWithIdToken`. Remove email OTP/magic-link from Profile (browser localhost redirect was broken for Tauri). Deep-link OAuth deferred. Android plugin returns `idToken`; desktop `google_sign_in` returns the ID token string.
+
+**Why:** Magic link opened an external browser; OTP setup was fragile. Same Google clients as Drive.
+
+**What was rejected and why:**
+- Supabase `signInWithOAuth` + custom scheme — deferred (approach 2 later).
+- Keeping email OTP as fallback — user asked to remove it.
 

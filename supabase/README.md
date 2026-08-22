@@ -10,11 +10,15 @@ Copy `.env.example` → `.env` (gitignored). Fill:
 
 | Variable | Where to get it |
 |---|---|
-| `VITE_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
-| `VITE_SUPABASE_ANON_KEY` | Same page → `anon` `public` key |
+| `VITE_SUPABASE_URL` | Supabase → Project Settings → API → **Project URL** (`https://xxxxx.supabase.co`) — **not** `db.xxxxx.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | Same page → **`anon` `public`** key — **never** `service_role` (secret). `VITE_` vars are exposed to the browser. |
 | `VITE_POWERSYNC_URL` | PowerSync Dashboard → instance URL (needed in Phase 5.3+) |
 
 Restart Vite / `tauri dev` after changing env.
+
+If the browser console shows `net::ERR_NAME_NOT_RESOLVED`, the URL host is wrong (often the `db.` Postgres host). Fix `.env` and restart.
+
+If you see **Forbidden use of secret API key in browser**, you pasted the `service_role` secret into `VITE_SUPABASE_ANON_KEY`. Replace it with the `anon` `public` key and restart.
 
 ## 2. Create / align `app_usage`
 
@@ -46,6 +50,22 @@ After the script:
 
 Drive never uploaded URLs. Prefer storing `url` as `null` in cloud rows until you explicitly decide otherwise. The column exists so the schema matches; the write path in Phase 5.4 should enforce the policy.
 
-## 6. Auth later
+## 6. Auth (Profile — Google ID token)
 
-Phase 5.3 will use the Supabase session JWT for PowerSync `fetch_credentials`. Google Sign-In may remain for product UX, but the sync identity for PowerSync is the Supabase `auth.users` id (`user_id`).
+Profile signs into Supabase with **`signInWithIdToken`** using the same Google OAuth ChronoWard already uses for Drive. Email OTP / magic links are not used (they opened the browser instead of Tauri).
+
+1. Fill `.env` (section 1). Restart `npm run desktop:dev`.
+2. **Authentication → Providers → Google** — enable.
+3. Client ID / Client Secret: use your **Web** OAuth client from Google Cloud (same as `webClientId` in `google-oauth.json` when present).
+4. **Authorized Client IDs** (important for native/desktop tokens): add
+   - Web client ID (`….apps.googleusercontent.com`)
+   - Desktop client ID from `google-oauth.json` (`desktopClientId`)
+5. In app: **Profile → Sign in with Google** (runs Drive Google flow, then links the ID token to Supabase).
+
+**Tauri CSP:** `connect-src` must allow `https://*.supabase.co` (already set). Restart Tauri after CSP/env changes.
+
+If Supabase rejects the token (`audience` / client ID errors), double-check Authorized Client IDs match the `aud` claim of the Google ID token (desktop = Desktop client; Android = Web/`serverClientId`).
+
+## 7. Auth + sync note
+
+Settings **Sign in with Google** (Drive) and Profile **Sign in with Google** (Supabase) share the same Google OAuth clients. Drive tokens stay local; Supabase session is separate. PowerSync identity is the Supabase `auth.users` id (`user_id`). Deep-link OAuth (`chronoward://…`) is deferred.

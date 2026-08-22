@@ -15,17 +15,17 @@ const navItems = [
 
 <template>
   <aside
-    class="flex w-60 shrink-0 flex-col border-r border-stone-200 bg-stone-50 text-stone-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+    class="flex h-dvh w-60 shrink-0 flex-col overflow-hidden border-r border-stone-200 bg-stone-50 text-stone-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
     style="padding-top: env(safe-area-inset-top)"
   >
-    <div class="flex items-center gap-3 px-5 py-6">
+    <div class="flex shrink-0 items-center gap-3 px-5 py-6">
       <span class="text-teal-400">
         <ChronoWardLogo :size="28" />
       </span>
       <span class="text-lg font-semibold tracking-tight">ChronoWard</span>
     </div>
 
-    <nav class="flex flex-1 flex-col gap-1 px-3" aria-label="Primary">
+    <nav class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3" aria-label="Primary">
       <RouterLink
         v-for="item in navItems"
         :key="item.to"
@@ -100,7 +100,7 @@ const navItems = [
     <RouterLink v-slot="{ href, navigate, isActive }" to="/profile" custom>
       <a
         :href="href"
-        class="mx-3 mb-4 flex items-center gap-3 rounded-xl border border-stone-200 px-3 py-3 transition hover:bg-stone-100 dark:border-slate-800 dark:hover:bg-slate-900"
+        class="mx-3 mt-auto mb-4 flex shrink-0 items-center gap-3 rounded-xl border border-stone-200 px-3 py-3 transition hover:bg-stone-100 dark:border-slate-800 dark:hover:bg-slate-900"
         :class="isActive ? 'bg-stone-100 ring-1 ring-teal-500/30 dark:bg-slate-900' : ''"
         style="margin-bottom: calc(1rem + env(safe-area-inset-bottom))"
         @click="navigate"

@@ -82,7 +82,10 @@ function onAdd() {
       v-else
       class="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-10 text-center dark:border-slate-700 dark:bg-slate-900/40"
     >
-      <p class="text-sm text-stone-500 dark:text-slate-400">No tasks yet. Add one above.</p>
+      <p class="text-sm text-stone-500 dark:text-slate-400">No tasks yet.</p>
+      <p class="mt-2 text-xs text-stone-400 dark:text-slate-500">
+        Add a focus task here or from the dashboard timer pill.
+      </p>
     </article>
   </section>
 </template>

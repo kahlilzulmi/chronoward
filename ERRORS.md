@@ -151,3 +151,16 @@
 
 **Note for next time:**
 - Android NDK risk is secondary until this desktop resolution conflict is fixed. Next unblock options: drop `tauri-plugin-sql` (and possibly our `sqlx` direct dep once writes move to PowerSync), wait for a Tauri SQL plugin on sqlx 0.9+, or patch/fork.
+
+## 2026-08-22 — Supabase auth "Failed to fetch" in Tauri
+
+**What didn't work:**
+- Calling `supabase.auth.signInWithOtp` with default `tauri.conf.json` CSP. `connect-src` allowed only localhost/ipc — no `https://*.supabase.co`, so the WebView blocked the fetch.
+
+**What worked instead:**
+- Extend CSP `connect-src` with `https://*.supabase.co wss://*.supabase.co` (and `.supabase.in` for some regions). Fully restart `tauri dev` / rebuild the Android app after changing CSP.
+
+**Note for next time:**
+- Browser-only Vite (`npm run dev`) may work while Tauri fails — that pattern usually means CSP, not bad Supabase keys.
+- `net::ERR_NAME_NOT_RESOLVED` with a `db.*.supabase.co` host means `.env` used the Postgres host; fix to Project URL `https://<ref>.supabase.co`.
+- `Forbidden use of secret API key in browser` means `VITE_SUPABASE_ANON_KEY` is the `service_role` secret; use the `anon` `public` key only.
